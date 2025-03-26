@@ -55,7 +55,7 @@ func newObject(db *StateDB, address common.Address, acct *types.StateAccount) *s
 ```
 
 传入的参数中，db 用于反射父类（比如通知错误、更新roothash 等），address 就是这个stateObject 所属的address。
-acct 这里比较神奇。之所以有这样的操作，是因为geth 中并非全量把整个world state 都存入内存，很有可能是已经存在了一个stateObject，然后从数据库中读取它。见：[[state.go#getStateObject]]
+acct 这里比较神奇。之所以有这样的操作，是因为geth 中并非全量把整个world state 都存入内存，很有可能是已经存在了一个stateObject，然后从数据库中读取它。见：[[StateDB.go#getStateObject]]
 
 ## getState
 
@@ -104,8 +104,18 @@ func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
 
 ```
 
-### 语法
-#### if语句中的短变量声明
+### commit 和不同cache
+关于什么是 **committed** State，什么是`originStorage`、dirtyStorage、pendingStorage、uncommittedStorage。
+
+见：[[StateDB.go#commit]]
+
+## updateRoot
+
+
+
+
+# 语法
+## if语句中的短变量声明
 ```go
 type Storage map[common.Hash]common.Hash
 // pendingStorage：Storage 
@@ -143,5 +153,3 @@ default:
 }
 ```
 
-
-### pending storage
