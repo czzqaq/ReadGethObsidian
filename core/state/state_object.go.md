@@ -134,7 +134,7 @@ tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:]))
 
 
 ## finalize
-
+清空 `s.dirtyStorage`  
 
 
 # 语法
