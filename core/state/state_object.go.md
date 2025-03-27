@@ -56,6 +56,13 @@ func newObject(db *StateDB, address common.Address, acct *types.StateAccount) *s
 
 传入的参数中，db 用于反射父类（比如通知错误、更新roothash 等），address 就是这个stateObject 所属的address。
 acct 这里比较神奇。之所以有这样的操作，是因为geth 中并非全量把整个world state 都存入内存，很有可能是已经存在了一个stateObject，然后从数据库中读取它。见：[[StateDB.go#getStateObject]]
+对于如下四个概念的不同，见 [[#四个storage]]
+```go
+		originStorage:      make(Storage),
+		dirtyStorage:       make(Storage),
+		pendingStorage:     make(Storage),
+		uncommittedStorage: make(Storage),
+```
 
 ## getState
 
@@ -104,8 +111,8 @@ func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
 
 ```
 
-### commit 和不同cache
-关于什么是 **committed** State，什么是`originStorage`、dirtyStorage、pendingStorage、uncommittedStorage。见：[[StateDB.go#commit]]
+## commit 
+
 
 ## updateRoot
 ```go
@@ -134,7 +141,68 @@ tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:]))
 
 
 ## finalize
-清空 `s.dirtyStorage`  
+清空 `s.dirtyStorage` ，更新uncommitedStorage 
+#### 调用栈
+- 对于每个dirtyStorage 中的key-value：
+    - 如果在 uncommittedStorage 中存在 key-value：从中删除。
+    - 如果在s.uncommittedStorage 中不存在 key-value：`s.uncommittedStorage[key] = s.GetCommittedState(key)` 见： [[#GetCommittedState]]
+    - 在 s.pendingStorage 中添加key-value
+ - 清空 s.dirtyStorage
+
+## GetCommittedState
+#### 调用栈
+- 如果 `s.pendingStorage[key]` 存在，返回 `s.pendingStorage[key]`
+- 否则，如果 `s.originStorage[key]` 存在，返回 `s.originStorage[key]`
+- 否则，从` s.db.reader.Storage(s.address, key) `中 获得，更新 `s.originStorage[key]`，返回 `s.originStorage[key]`
+
+
+# 四个storage
+## 更新时机
+### originStorage
+1. <= 在[[#GetCommittedState]] 中，通过reader 读取历史上的账户状态。
+2. <= 在 [[#commit]] 时，将 `pendingStorage` 中的内容转移至 `originStorage`，更新`originStorage`上储存的之前的状态。
+
+### pendingStorage
+1. <= [[#finalize]] 时，从 `dirtyStorage` 中转移至 `pendingStorage`
+2. => 在 [[#commit]] 时，将 `pendingStorage` 中的内容转移至 `originStorage`，清空 `pendingStorage`
+
+### dirtyStorage
+
+1. <= `setState` 时，仅仅是往 `dirtyStorage` 中储存。这是一个fanout 特别多的函数，例如在`evm transition` 命令行中被调用。
+2. => [[#finalize]] 时，从 `dirtyStorage` 中转移至 `pendingStorage`，清空 `dirtyStorage`
+
+### uncommittedStorage
+
+1. <= 在finalize 中
+2. =>  在 [[#updateTrie]] 中，所有 储存在Storage trie 的 Storage 均来自于 `uncommittedStorage`。在 `updateTrie` 完成，即将退出时，清空 `uncommittedStorage`
+
+## 总结
+
+```mermaid
+graph TD;
+    A((setState)) -->|写入| B[dirtyStorage]
+    B -->|finalize| C[pendingStorage]
+    C -->|commit| D[originStorage]
+    
+    B -->|追踪未提交变更| E[uncommittedStorage]
+    E -->|updateTrie| F((Storage Trie))
+
+    style A fill:#ffcc00,stroke:#333,stroke-width:2px;
+    style B fill:#ff6666,stroke:#333,stroke-width:2px;
+    style C fill:#66ccff,stroke:#333,stroke-width:2px;
+    style D fill:#66ff66,stroke:#333,stroke-width:2px;
+    style E fill:#ff9966,stroke:#333,stroke-width:2px;
+    style F fill:#cccccc,stroke:#333,stroke-width:2px;
+```
+
+## 为什么
+
+### uncommittedStorage(under 为什么)
+#### 作用
+
+> UncommittedStorage tracks a set of storage entries that have been modified but not yet committed since the "last commit operation", along with their original values before mutation.
+> 
+> Specifically, the commit will be performed after each transaction before the byzantium fork, therefore the map is already reset at the transaction boundary; however post the byzantium fork, the commit will only be performed at the end of block, this set essentially tracks all the modifications made within the block.
 
 
 # 语法
