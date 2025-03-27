@@ -1,3 +1,4 @@
+#archived
 # 作用
 ```go
 // journal contains the list of state modifications applied since the last state

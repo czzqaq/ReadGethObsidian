@@ -7,3 +7,9 @@ type Trie interface {
     Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet)
 }
 ```
+
+## UpdateStorage,DeleteStorage
+
+
+## hash()
+

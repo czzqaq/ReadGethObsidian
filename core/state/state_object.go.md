@@ -121,7 +121,16 @@ func (s *stateObject) updateRoot() {
 	s.data.Root = tr.Hash()
 }
 ```
+### updateTrie
+在 `obj.pendingStorage ` 中，遍历所有的storage key-value ，如果value 是空，就删除，如果非空，就更新，调用 
+```go
+tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:]))
+```
+详见：[[database.go#UpdateStorage,DeleteStorage]]
 
+### 更新哈希
+
+要更新本账户的 storage trie 的哈希。关键是怎么计算哈希。见 [[database.go#hash()]]
 
 
 ## finalize
