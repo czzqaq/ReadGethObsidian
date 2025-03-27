@@ -104,7 +104,7 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool, noStorageWiping 
 
 ### IntermediateRoot
 #### 作用
-计算当前的state trie 的root hash。
+计算当前的state trie 的root hash，更新object 的状态。
 
 #### 调用栈
 - s.IntermediateRoot
@@ -115,3 +115,10 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool, noStorageWiping 
     - 更多的关于s.witness 的处理。
 
 ### Finalize
+#### 作用
+对于每个**脏的地址** addr ：关于脏地址的统计，见：[[journal.go]]
+obj = s.stateObjects[addr]
+删除被destruct 或者空的 obj。
+对于其他的object，**调用：obj.finialize** . [[state_object.go#finalize]]
+
+

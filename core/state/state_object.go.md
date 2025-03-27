@@ -112,6 +112,8 @@ func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
 ## updateRoot
 
 
+## finalize
+
 
 
 # 语法
