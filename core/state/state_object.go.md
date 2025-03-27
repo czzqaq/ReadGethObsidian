@@ -105,11 +105,23 @@ func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
 ```
 
 ### commit 和不同cache
-关于什么是 **committed** State，什么是`originStorage`、dirtyStorage、pendingStorage、uncommittedStorage。
-
-见：[[StateDB.go#commit]]
+关于什么是 **committed** State，什么是`originStorage`、dirtyStorage、pendingStorage、uncommittedStorage。见：[[StateDB.go#commit]]
 
 ## updateRoot
+```go
+// updateRoot flushes all cached storage mutations to trie, recalculating the
+// new storage trie root.
+func (s *stateObject) updateRoot() {
+	// Flush cached storage mutations into trie, short circuit if any error
+	// is occurred or there is no change in the trie.
+	tr, err := s.updateTrie()
+	if err != nil || tr == nil {
+		return
+	}
+	s.data.Root = tr.Hash()
+}
+```
+
 
 
 ## finalize

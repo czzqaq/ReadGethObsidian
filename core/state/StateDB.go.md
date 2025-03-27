@@ -68,20 +68,14 @@ func (s *StateDB) getStateObject(addr common.Address) *stateObject {
 // Since self-destruction was deprecated with the Cancun fork and there are
 // no empty accounts left that could be deleted by EIP-158, storage wiping
 // should not occur.
-func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool, noStorageWiping bool) (common.Hash, error) {
-	ret, err := s.commitAndFlush(block, deleteEmptyObjects, noStorageWiping)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return ret.root, nil
-}
+func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool, noStorageWiping bool) (common.Hash, error){...}
 ```
 
 针对stateDB 的操作，效果是：
 1. 使得cache 都不再工作。
 2. 创建新的state 状态，包括新的root，包括储存commit 后的state。
 
-### 调用例：
+### 使用例：
 1. 用户输入 `geth import` 
 2. 调用 cmd/geth/chaincmd.go:importChain 
 3. 调用`cmd/utils/cmd.go:ImportChain`
@@ -117,7 +111,7 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool, noStorageWiping 
 ### Finalize
 #### 作用
 对于每个**脏的地址** addr ：关于脏地址的统计，见：[[journal.go]]
-obj = s.stateObjects[addr]
+obj = s.stateObjects\[addr\]
 删除被destruct 或者空的 obj。
 对于其他的object，**调用：obj.finialize** . [[state_object.go#finalize]]
 
