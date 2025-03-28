@@ -1,7 +1,7 @@
 
-## 黄皮书中的数据
+# 黄皮书中的数据
 
-### 直接储存
+## 直接储存
 ```go
 func (tx *DynamicFeeTx) txType() byte           { return DynamicFeeTxType }
 
@@ -26,7 +26,7 @@ func (tx *DynamicFeeTx) nonce() uint64          { return tx.Nonce }
 func (tx *DynamicFeeTx) to() *common.Address    { return tx.To }
 
 ```
-### 签名密码学
+## 签名密码学
 ```go
 func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {
     return tx.V, tx.R, tx.S
@@ -36,7 +36,10 @@ func (tx *DynamicFeeTx) setSignatureValues(chainID, v, r, s *big.Int) {
     tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
 ```
+### 概念说明
+见：[[appendix.F Signing Transaction]]
 
+### v 是什么
 其中，在 graphql/graphql.go 中，定义了
 
 ```go
@@ -53,7 +56,7 @@ func (t *Transaction) YParity(ctx context.Context) (*hexutil.Big, error) {
 
 说明这里的V 字段就不是传统的V（parity+27)，而是单纯的 yParity，仅仅有01 两种取值。
 
-### encoding
+## encoding
 $$
   L_e^T(T) =
   \begin{cases}
