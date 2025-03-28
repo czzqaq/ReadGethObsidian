@@ -66,52 +66,10 @@ acct 这里比较神奇。之所以有这样的操作，是因为geth 中并非�
 		uncommittedStorage: make(Storage),
 ```
 
-## getState
+## GetState
 
-主要逻辑见下面这个函数：
-
-```go
-// GetCommittedState retrieves the value associated with the specific key
-// without any mutations caused in the current execution.
-func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
-	// If we have a pending write or clean cached, return that
-	if value, pending := s.pendingStorage[key]; pending {
-		return value
-	}
-	if value, cached := s.originStorage[key]; cached {
-		return value
-	}
-	// If the object was destructed in *this* block (and potentially resurrected),
-	// the storage has been cleared out, and we should *not* consult the previous
-	// database about any storage values. The only possible alternatives are:
-	//   1) resurrect happened, and new slot values were set -- those should
-	//      have been handles via pendingStorage above.
-	//   2) we don't have new values, and can deliver empty response back
-	if _, destructed := s.db.stateObjectsDestruct[s.address]; destructed {
-		s.originStorage[key] = common.Hash{} // track the empty slot as origin value
-		return common.Hash{}
-	}
-	s.db.StorageLoaded++
-
-	start := time.Now()
-	value, err := s.db.reader.Storage(s.address, key)
-	if err != nil {
-		s.db.setError(err)
-		return common.Hash{}
-	}
-	s.db.StorageReads += time.Since(start)
-
-	// Schedule the resolved storage slots for prefetching if it's enabled.
-	if s.db.prefetcher != nil && s.data.Root != types.EmptyRootHash {
-		if err = s.db.prefetcher.prefetch(s.addrHash, s.origin.Root, s.address, nil, []common.Hash{key}, true); err != nil {
-			log.Error("Failed to prefetch storage slot", "addr", s.address, "key", key, "err", err)
-		}
-	}
-	s.originStorage[key] = value
-	return value
-}
-
-```
+如果在 dirtyStorage 中有key-value 的记录，那么返回dirtyStorage, 否则返回 [[#GetCommittedState]]。
+总之是按照dirty->pending->origin 的顺序返回的，即：返回当前的状态。
 
 ## commit 
 这个函数的作用是返回一个装了 stateObject 中全部内容的 `accountUpdate`。并且归档 pendingStorage.
