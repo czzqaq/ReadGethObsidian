@@ -1,3 +1,5 @@
+#archived 
+
 # 说明
 
 > stateObject represents an Ethereum account which is being modified.
@@ -112,6 +114,16 @@ func (s *stateObject) GetCommittedState(key common.Hash) common.Hash {
 ```
 
 ## commit 
+这个函数的作用是返回一个装了 stateObject 中全部内容的 `accountUpdate`。并且归档 pendingStorage.
+### 调用栈
+1. 赋值 accountUpdate，包括账户 address，RLP(s.data)(见：[[#state_account]])，contractCode(s.dirtycode)
+2. 调用commitStorage，进一步更新 accountUpdate：
+        对于 pendingStorage 的每个key,value:
+            1. 计算 Keccak（key）
+            2. 计算 RLPEncode(value)
+            3. 写入 originStorage
+        清空 pendingStorage
+3. 调用 [[database.go#Commit]]
 
 
 ## updateRoot
@@ -144,16 +156,20 @@ tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:]))
 清空 `s.dirtyStorage` ，更新uncommitedStorage 
 #### 调用栈
 - 对于每个dirtyStorage 中的key-value：
-    - 如果在 uncommittedStorage 中存在 key-value：从中删除。
-    - 如果在s.uncommittedStorage 中不存在 key-value：`s.uncommittedStorage[key] = s.GetCommittedState(key)` 见： [[#GetCommittedState]]
+    - 如果在 uncommittedStorage 中存在 key，且value 等于原始值，说明这个值的修改被撤销了。`delete(s.uncommittedStorage, key)`
+    - 如果在s.uncommittedStorage 中不存在 key：`s.uncommittedStorage[key] = s.GetCommittedState(key)` 见： [[#GetCommittedState]]
     - 在 s.pendingStorage 中添加key-value
  - 清空 s.dirtyStorage
 
+#### 
 ## GetCommittedState
 #### 调用栈
 - 如果 `s.pendingStorage[key]` 存在，返回 `s.pendingStorage[key]`
 - 否则，如果 `s.originStorage[key]` 存在，返回 `s.originStorage[key]`
-- 否则，从` s.db.reader.Storage(s.address, key) `中 获得，更新 `s.originStorage[key]`，返回 `s.originStorage[key]`
+- 特殊情况检查：如果这个合约被销毁了，返回空。
+- 否则，从` s.db.reader.Storage(s.address, key) `中 获得，更新 `s.originStorage[key]` 作为缓存，返回 `s.originStorage[key]`
+#### 作用
+获得一个key 对应的在本次交易中的最终状态，用于更新 uncommittedStorage。简单的说，就是有pending 取pending，没有pending 就更新originStorage。
 
 
 # 四个storage
@@ -173,7 +189,7 @@ tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:]))
 
 ### uncommittedStorage
 
-1. <= 在finalize 中
+1. <= 在 finalize 中
 2. =>  在 [[#updateTrie]] 中，所有 储存在Storage trie 的 Storage 均来自于 `uncommittedStorage`。在 `updateTrie` 完成，即将退出时，清空 `uncommittedStorage`
 
 ## 总结
@@ -197,12 +213,26 @@ graph TD;
 
 ## 为什么
 
-### uncommittedStorage(under 为什么)
-#### 作用
+### 为什么需要 uncommittedStorage
 
 > UncommittedStorage tracks a set of storage entries that have been modified but not yet committed since the "last commit operation", along with their original values before mutation.
 > 
 > Specifically, the commit will be performed after each transaction before the byzantium fork, therefore the map is already reset at the transaction boundary; however post the byzantium fork, the commit will only be performed at the end of block, this set essentially tracks all the modifications made within the block.
+
+#### Byzantium 分叉前：
+
+- 每笔交易之后都立即 `commit`，状态与数据库保持同步。
+- 所以每笔交易的状态改动都可以直接提交，无需追踪整个区块的变动。
+
+#### Byzantium 分叉后：
+
+- 改为 **整块（block-level）commit**：一整块执行完之后才进行一次 commit。
+- 在此期间，多个交易可能对同一个 storage 槽进行多次修改。
+- 为了能正确地计算出最终的 storage trie（状态树），我们必须知道：
+    - 每个变更槽位在**本区块执行前**的原始值。
+    - 哪些槽位在本区块中被修改过。
+
+槽位上变更storage 的 计算的方法见：[[#GetCommittedState]] 。
 
 
 # 语法
