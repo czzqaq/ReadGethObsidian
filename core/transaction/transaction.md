@@ -1,0 +1,7 @@
+这不是一个文件夹里的内容，它们大多数都定义在了types/ 下。不过我决定做一个 transaction 专题。
+内容依据是黄皮书 [[4.2 transaction]]
+
+从 txdata 的实现开始，[[txdata, 以tx_dynamic_fee.go 为例]]
+
+
+[[gas fee]] 这是个未完成的部分，在处理gas 一章的时候，仔细研究。
