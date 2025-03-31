@@ -133,7 +133,7 @@ func NewSubscription(producer func(<-chan struct{}) error) Subscription {
     return s
 }
 ```
-## chan 和 Goroutine
+## chan 
 `go` 关键字用于启动一个轻量级线程（Goroutine）
 `chan` 是 Go 中的并发通信工具，用于在 Goroutine 之间传递数据。
 
@@ -242,6 +242,24 @@ fmt.Println("Received signal, the subroutine work done")
 > [!caution] 不阻塞还有通道关闭的情况
 > 也就是，不能简单理解为一直阻塞直到得到信号，通道被关闭后也会“得到信号”
 
+
+#### 实现一个轻量的锁
+```go
+f.sendLock = make(chan struct{}, 1)
+f.sendLock <- struct{}{} // 初始化时放入一个 “令牌”
+
+```
+
+这个 channel 被用作一个 **轻量级的互斥锁（mutex）**，类似于信号量或令牌桶。
+使用方式：
+```go
+<-f.sendLock // 获取“锁”，阻塞直到成功取到
+// 临界区代码
+fmt.Print("helloworld")
+f.sendLock <- struct{}{} // 释放“锁”
+```
+
+这样，就可以保证永远最多只有一个Routine 可以拿到这个令牌，使用资源。这个人用完资源后，必须把令牌放回去。
 
 ### 只读通道和只写通道
 ```go
