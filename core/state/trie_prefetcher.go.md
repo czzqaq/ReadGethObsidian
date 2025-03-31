@@ -6,6 +6,6 @@
 
 ## 使用例
 
-1. 在 [[blockchain.go#insertChain]] 中，`statedb.StartPrefetcher`，以当前的 worldstate 的Root Hash，和 world state 的trie database ，开启一个Trieprefetcher. 
+1. 在 [[blockchain.go-insertChain#insertChain]] 中，`statedb.StartPrefetcher`，以当前的 worldstate 的Root Hash，和 world state 的trie database ，开启一个Trieprefetcher. 
 2. 调用 s.prefetcher.prefetch 方法，启动了一个 subprefetcher goRoutine。并且 `schedule` 了一批应该被写入的状态（比如一个交易涉及到哪些 account，就把这些account 在 `prefetch` 中传入到schedule ，与其相关的状态都会被添加。 
 3. 在 `subfetcher.loop` 中，不断往绑定的 trie 内存中写入状态。
