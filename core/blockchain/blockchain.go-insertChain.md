@@ -16,14 +16,16 @@
 
 ## 事件处理
 ```go
-	if atomic.AddInt32(&bc.blockProcCounter, 1) == 1 {
-		bc.blockProcFeed.Send(true)
-	}
+    defer func() {
+        if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
+            bc.chainHeadFeed.Send(ChainHeadEvent{Header: lastCanon.Header()})
+        }
+    }()
 ```
 
-详见：[[feed.go]]
-
-
+原理见：[[feed.go]]
+blockProcFeed 和 chainHeadFeed 的事件被类似于 eth/api_backend 的对象订阅，用来监听变化。
+其中，blockProcFeed 的作用是提醒有区块在处理。`chainHeadFeed` 的作用比较重要（如上面的代码），表示的事
 ## sign transaction
 ```go
     SenderCacher().RecoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number(), chain[0].Time()), chain)
