@@ -25,14 +25,18 @@
 
 原理见：[[feed.go]]
 blockProcFeed 和 chainHeadFeed 的事件被类似于 eth/api_backend 的对象订阅，用来监听变化。
-其中，blockProcFeed 的作用是提醒有区块在处理。`chainHeadFeed` 的作用比较重要（如上面的代码），表示的事
+其中，blockProcFeed 的作用是提醒有区块在处理。`chainHeadFeed` 的作用比较重要（如上面的代码），表示的事:
+
+`bc.CurrentBlock()` 是当前区块链的叶子节点，比如，正在打包的那个。lastCanon 是被确确实实插入的block 中，height 最大的那个。如果刚刚被插入的那个block 成为了主链的链头，就产生信号`chainHeadFeed`。
 ## sign transaction
 ```go
     SenderCacher().RecoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number(), chain[0].Time()), chain)
 ```
-预备知识：
+见：
 [[transaction_signing.go]]
 [[Sender_cacher.go]]
+
+另起若干线程，开始计算transaction 的signer 地址。
 
 
 ## verify header
@@ -75,7 +79,7 @@ func (it *insertIterator) next() (*types.Block, error) {
 关于validity，见：[[block_validator.go]]
 至于next 本身的逻辑，只是 index++ 而已。
 
-# snapshot
+## 跳过已经处理的
 ```go
   
 
@@ -116,3 +120,38 @@ func (it *insertIterator) next() (*types.Block, error) {
 		// Falls through to the block import
 	}
 ```
+
+上面的代码还可以细分为两部分：
+跳过已知部分：
+```go
+for block != nil && bc.skipBlock(err, it) { ... }
+```
+
+处理已知但是需要重写的区块：
+```go
+if err := bc.writeKnownBlock(block); err != nil { ... }
+```
+
+## 区块逐个执行和插入
+```go
+for ; block != nil && err == nil || errors.Is(err, ErrKnownBlock); block, err = it.next() {
+	...
+	statedb, err := state.New(parent.Root, bc.statedb)
+	...
+	res, err := bc.processBlock(block, statedb, start, setHead)
+	...
+}
+```
+这里就是核心逻辑了，之后该函数结束，返回witness 和成功插入数。
+
+
+# 其他辅助模块
+## witness
+
+## snapshot
+它被用于跳过处理过的区块，用于快速查询world state Trie 减少对底层 Trie 的频繁读取。
+
+- 如果我们能通过 snapshot 快速访问状态，就可以跳过繁重的状态重建过程。
+- 如果 snapshot 缺失，就需要重新执行区块以构建状态。
+
+详见 [[snapshot]] 。

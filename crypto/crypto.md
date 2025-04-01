@@ -5,7 +5,8 @@ type: folder_brief_live
 ```
  
 crypto/crypto.go:PubkeyToAddress  [[accounts.keystore]]
-
+crypto.Sign [[transaction_signing.go]]
+crypto.Ecrecover  交易哈希+r,s,v -> 公钥
 
 crypto  
 ┣ blake2b/  
