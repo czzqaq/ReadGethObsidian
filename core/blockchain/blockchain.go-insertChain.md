@@ -81,8 +81,6 @@ func (it *insertIterator) next() (*types.Block, error) {
 
 ## 跳过已经处理的
 ```go
-  
-
 	// Left-trim all the known blocks that don't need to build snapshot
 	if bc.skipBlock(err, it) {
 		// First block (and state) is known
@@ -123,14 +121,24 @@ func (it *insertIterator) next() (*types.Block, error) {
 
 上面的代码还可以细分为两部分：
 跳过已知部分：
-```go
-for block != nil && bc.skipBlock(err, it) { ... }
-```
 
 处理已知但是需要重写的区块：
 ```go
 if err := bc.writeKnownBlock(block); err != nil { ... }
 ```
+
+### 详细内容
+1. 进入的条件是 `bc.skipBlock` 返回true，也就是it 指向的一个block 可以跳过。`bc.skipBlock` 中牵扯到了 [[#snapshot]]，如果这个块存在于snapshot（说明处理过了），或者这个block 的parent block 和这个block 都不属于snapshot（主要是第一次调用的时候，说明这个入参 chain 根本就连不上），就跳过。
+2. 先跳过全部被处理过的block（已知部分）
+```go
+for block != nil && bc.skipBlock(err, it) { 
+            if block.NumberU64() > current.Number.Uint64() || bc.GetCanonicalHash(block.NumberU64()) != block.Hash() {
+                break
+...
+            }}
+```
+3. 处理已知但是需要重写的区块(也就是还是在snapshot 里，但是hash 对不上的) ，详见[[blockchain.go-writeBlock#writeKnownBlock]]
+4. 错误处理，但是当 `consensus.ErrPrunedAncestor` 的错误时，需要`bc.insertSideChain`
 
 ## 区块逐个执行和插入
 ```go
@@ -144,10 +152,45 @@ for ; block != nil && err == nil || errors.Is(err, ErrKnownBlock); block, err = 
 ```
 这里就是核心逻辑了，之后该函数结束，返回witness 和成功插入数。
 
+### 详细内容
+1. 依然可以skipBlock 的情况，这里肯定是parent 没有记录，但是自己被记录了的情况，是special case，不关注
+2. 对于[[#witness]] 的处理，不关注。
+3. 对于未来区块的prefetch，用来加速的，不关注。
+4. 调用`bc.processBlock`，这里才是入链的核心，包括验证等。详见[[#processBlock]]
+5. 依据执行结果，更新统计等。
 
-# 其他辅助模块
+
+# processBlock
+
+## processor
+```go
+res, err := bc.processor.Process(block, statedb, bc.vmConfig)
+```
+processor 的详细实现在`state_processor.go`，不过它确实只在insertblock 时被使用。
+
+## validator
+```go
+bc.validator.ValidateState(block, statedb, res, false)
+```
+
+## writeblock
+详见[[blockchain.go-writeBlock#writeBlockWithState]]
+```go
+    if !setHead {
+        // Don't set the head, only insert the block
+        err = bc.writeBlockWithState(block, res.Receipts, statedb)
+    } else {
+        status, err = bc.writeBlockAndSetHead(block, res.Receipts, res.Logs, statedb, false)
+    }
+```
+对于set head 和不是set head 的区别，见[[#sethead]]
+
+
+# 其他
 ## witness
-
+是一种stateless （区别于黄皮书上介绍的具有world state 的一般区块） 区块，只保存最基础的内容。
+详见：
+[[stateless]]
 ## snapshot
 它被用于跳过处理过的区块，用于快速查询world state Trie 减少对底层 Trie 的频繁读取。
 
@@ -155,3 +198,10 @@ for ; block != nil && err == nil || errors.Is(err, ErrKnownBlock); block, err = 
 - 如果 snapshot 缺失，就需要重新执行区块以构建状态。
 
 详见 [[snapshot]] 。
+
+## sethead
+bc.insertChain 的调用者包括：
+- InsertChain，sethead = true
+- insertSideChain，sethead = true
+- recoverAncestors，sethead = false
+- InsertBlockWithoutSetHead，sethead = false
