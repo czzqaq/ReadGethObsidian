@@ -98,10 +98,10 @@ func (s *StateDB) getStateObject(addr common.Address) *stateObject {
 
 ### Finalize
 #### 作用
-对于每个**脏的地址** addr ：关于脏地址的统计，见：[[journal.go]]
-obj = s.stateObjects\[addr\]
-删除被destruct 或者空的 obj。
-对于其他的object，**调用：obj.finialize** . [[state_object.go#finalize]]
+对于每个**脏的地址** addr ：(关于脏地址的统计，见：[[journal.go]] 和 )
+	obj = s.stateObjects\[addr\]
+	删除被destruct 或者空的 obj。
+	对于其他的object，**调用：obj.finialize** . [[state_object.go#finalize]]
 
 
 # EIP 和补充

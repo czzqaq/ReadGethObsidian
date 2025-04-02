@@ -152,13 +152,14 @@ for ; block != nil && err == nil || errors.Is(err, ErrKnownBlock); block, err = 
 ```
 这里就是核心逻辑了，之后该函数结束，返回witness 和成功插入数。
 
-### 详细内容
+### 插入的核心逻辑
 1. 依然可以skipBlock 的情况，这里肯定是parent 没有记录，但是自己被记录了的情况，是special case，不关注
 2. 对于[[#witness]] 的处理，不关注。
 3. 对于未来区块的prefetch，用来加速的，不关注。
 4. 调用`bc.processBlock`，这里才是入链的核心，包括验证等。详见[[#processBlock]]
 5. 依据执行结果，更新统计等。
 
+可见，InsertChain 的核心，就是对每个chain 里的 block 进行了processBlock 的过程，详见下方的[[#processBlock]]
 
 # processBlock
 
@@ -166,7 +167,88 @@ for ; block != nil && err == nil || errors.Is(err, ErrKnownBlock); block, err = 
 ```go
 res, err := bc.processor.Process(block, statedb, bc.vmConfig)
 ```
-processor 的详细实现在`state_processor.go`，不过它确实只在insertblock 时被使用。
+processor 的详细实现在`state_processor.go`，不过它确实只在insertblock 时被使用，于是也归于这个文件。
+
+### DAO 分叉处理
+
+```go
+if p.config.DAOForkSupport && p.config.DAOForkBlock != nil &&
+   p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
+	misc.ApplyDAOHardFork(statedb)
+}
+```
+详见[[concensus]]
+### EVM 
+```go
+    context = NewEVMBlockContext(header, p.chain, nil)
+    evm := vm.NewEVM(context, tracingStateDB, p.config, cfg)
+```
+其中
+header 是入参`block.Header()`
+`processor.chain` 是当前区块链上的拓扑，会随着p.Process 逐渐更新
+tracingStateDB 是对入参`statedb` [[StateDB.go]] 的包装。在blockinsert 中，它的最初来源是blockchain.cacheddatabase. 
+cfg是入参，规定了evm 在执行时的一些小细节，比如要不要考虑basefee。
+
+### beacon chain 处理
+```go
+if beaconRoot := block.BeaconRoot(); beaconRoot != nil {
+	ProcessBeaconBlockRoot(*beaconRoot, evm)
+}
+```
+> ProcessBeaconBlockRoot applies the EIP-4788 system call to the beacon block root contract
+
+
+### 交易循环
+这里是核心内容。
+```go
+for i, tx := range block.Transactions() {
+	msg, err := TransactionToMessage(tx, signer, header.BaseFee)
+	statedb.SetTxContext(tx.Hash(), i)
+	receipt, err := ApplyTransactionWithEVM(...)
+}
+```
+`TransactionToMessage` 里的Message 就是一个对transaction 中字段的包装。而SetTxContext 就只是把`transaction tx` 的值传一下。主要看 ApplyTransactionWithEVM
+
+#### ApplyTransactionWithEVM 
+
+##### 我在这里
+
+```
+InsertChain → ↳ 
+	processBlock → ↳ 
+		processor.Process  ↳ 
+			ApplyTransactionWithEVM  ← 你正在看的函数
+```
+##### 执行交易
+```go
+result, err := ApplyMessage(evm, msg, gp)
+```
+详见 [[state_transition.go#ApplyMessage]]
+
+##### state trie 结算
+
+```go
+if evm.ChainConfig().IsByzantium(blockNumber) {
+	evm.StateDB.Finalise(true)
+} else {
+	root = statedb.IntermediateRoot(evm.ChainConfig().IsEIP158(blockNumber)).Bytes()
+}
+```
+详见[[StateDB.go#IntermediateRoot]] 和 [[StateDB.go#Finalize]]
+
+##### 产生receipt
+```go
+return MakeReceipt(evm, result, statedb, blockNumber, blockHash, tx, *usedGas, root)
+```
+就是写入一个receipt，详见[[receipt.go]]
+
+### finalize
+```go
+    // Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
+    p.chain.engine.Finalize(p.chain, header, tracingStateDB, block.Body())
+```
+详见 [[concensus]]
+
 
 ## validator
 ```go
