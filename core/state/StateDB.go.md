@@ -100,8 +100,30 @@ func (s *StateDB) getStateObject(addr common.Address) *stateObject {
 #### 作用
 对于每个**脏的地址** addr ：(关于脏地址的统计，见：[[journal.go]] 和 )
 	obj = s.stateObjects\[addr\]
-	删除被destruct 或者空的 obj。
+	删除被destruct 或者空的 obj。即对应了 [[6. Transaction Execution#最终状态（Final State）]], 详见 [[#SelfDestruct]]
 	对于其他的object，**调用：obj.finialize** . [[state_object.go#finalize]]
+
+## SelfDestruct
+
+```go
+// SelfDestruct marks the given account as selfdestructed.
+// This clears the account balance.
+func (s *StateDB) SelfDestruct(addr common.Address) uint256.Int {
+    stateObject := s.getStateObject(addr)
+    var prevBalance = *(stateObject.Balance())
+
+    if !stateObject.Balance().IsZero() {
+        stateObject.SetBalance(new(uint256.Int))
+    }
+    stateObject.markSelfdestructed()
+    return prevBalance
+}
+```
+
+调用了markSelfdestructed 的stateObject，会在commit 阶段的[[#Finalize]] 中被最终销毁。这个函数还做了清空balance 的操作。
+
+### deactivate self destruct （EIP-6780)
+创建合约时的destruct 会退款（似乎是这个意思）
 
 
 # EIP 和补充

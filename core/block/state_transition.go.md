@@ -160,6 +160,14 @@ if rules.IsEIP4762 {
 EIP-4762 引入的 `AccessEvents`，影响状态访问追踪，非强制性验证
 这段代码插在了检查代码中。
 
+此外，在整个流程结束，[[#状态最终化（State Finalization）]] 后：
+```go
+        // add the coinbase to the witness iff the fee is greater than 0
+        if rules.IsEIP4762 && fee.Sign() != 0 {
+            st.evm.AccessEvents.AddAccount(st.evm.Context.Coinbase, true)
+        }
+```
+beneficiary 的地址也会加入到 AccessEvents.
 
 ### Prepare
 这段代码对应了 [[6. Transaction Execution#构造子状态 $A *$]]
@@ -231,8 +239,11 @@ for _, el := range list {
 | access list 地址   | \( E_a \in T_A \)   | `al.AddAddress(el.Address)`                       | 来自 EIP-2930            |
 | access list 的存储键 | \( (E_a, E_s[i]) \) | `al.AddSlot(el.Address, key)`                     | 来自 EIP-2930            |
 
-### transientStorage 修改
-#### 清空
+## State Transition 状态变化笔记整理
+
+本节对应 [[6. Transaction Execution#状态最终化（State Finalization）]]
+
+### 清空
 
 ```go
 func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
@@ -242,8 +253,33 @@ func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, d
     s.transientStorage = newTransientStorage()
 }
 ```
-这里对 transientStorage 做了清空。在黄皮书中没有这步，它反而说：
->我们首先定义**检查点状态（checkpoint state）** $\sigma_0$，它是在交易执行前对原状态 $\sigma$ 作出两点修改后的结果: 扣除交易发送者的余额 $T_g \cdot p$（用于支付 gas），并将其 nonce 加 1。
+
+### 扣除 gas 费用
+以下代码来自 `buyGas()` 函数：
+
+```go
+mgval := new(big.Int).SetUint64(st.msg.GasLimit)
+mgval.Mul(mgval, st.msg.GasPrice) // T_g * T_p
+
+// EIP-1559 类型交易使用 gasFeeCap
+if st.msg.GasFeeCap != nil {
+    balanceCheck.SetUint64(st.msg.GasLimit)
+    balanceCheck = balanceCheck.Mul(balanceCheck, st.msg.GasFeeCap)
+}
+
+// blob gas 费用（EIP-4844）
+if st.evm.ChainConfig().IsCancun(...) {
+    blobFee := blobGas * BlobBaseFee
+    mgval.Add(mgval, blobFee)
+}
+
+// 扣除余额
+st.state.SubBalance(st.msg.From, mgvalU256, tracing.BalanceDecreaseGasBuy)
+
+```
+对应：
+$\sigma_0[S(T)]_b = \sigma[S(T)]_b - T_g \cdot T_p$
+此外，还增加了EIP-4844 规定的blob 费用。
 
 #### 设置nonce
 ```go
@@ -251,4 +287,130 @@ st.state.SetNonce(msg.From, st.state.GetNonce(msg.From)+1, tracing.NonceChangeEo
 ```
 $$\sigma_0[S(T)]_n = \sigma[S(T)]_n + 1$$
 
-#### gas 处理
+## Call
+### EIP-7702 authorizations
+
+```go
+        // Apply EIP-7702 authorizations.
+        if msg.SetCodeAuthorizations != nil {
+            for _, auth := range msg.SetCodeAuthorizations {
+                st.applyAuthorization(&auth)
+            }
+        }
+```
+详见EIP 分析部分
+
+### 执行
+```go
+        // Execute the transaction's call.
+    if contractCreation {
+        ret, _, st.gasRemaining, vmerr = st.evm.Create(msg.From, msg.Data, st.gasRemaining, value)
+	else{
+	    // st.state.SetNonce(msg.From, st.state.GetNonce(msg.From)+1, tracing.NonceChangeEoACall)
+	    // apply EIP-7702 authorizations
+
+        ret, st.gasRemaining, vmerr = st.evm.Call(msg.From, st.to(), msg.Data, st.gasRemaining, value)
+	}
+```
+用剩余的gas ，执行data。这部分是evm 是工作了。这里明白它改变了gas就行。
+
+
+## 状态最终化（State Finalization）
+
+本节对应黄皮书公式最后一步 —— 将执行中的临时状态 $\sigma_P$ 转换为最终状态 $\sigma^*$，包括退还剩余 **gas** 和支付 **tip** 给 **coinbase**（即 $B_{H_c}$）。见[[6. Transaction Execution#状态最终化（State Finalization）]]
+
+### refund
+
+以下代码段完成了上述两项状态更新：
+
+```go
+gasRefund := st.calcRefund() // g^*
+st.gasRemaining += gasRefund
+
+// EIP-7623 modification
+st.returnGas()
+```
+
+#### 对应公式：
+
+$$
+\sigma^*[S(T)]_b = \sigma_P[S(T)]_b + g^* \cdot p
+$$
+
+---
+
+#### gas floor 限制（EIP-7623）
+
+```go
+if rules.IsPrague {
+    if st.gasUsed() < floorDataGas {
+        st.gasRemaining = st.initialGas - floorDataGas
+    }
+}
+```
+
+- 如果实际使用 gas 太少（低于 data floor），则强制最低 gas 消耗
+- 会影响 $g^*$ 的计算，进而影响退还金额
+
+---
+
+###  发放给 coinbase 的 tip
+
+```go
+effectiveTip := msg.GasPrice
+if rules.IsLondon {
+    effectiveTip = new(big.Int).Sub(msg.GasFeeCap, st.evm.Context.BaseFee)
+    if effectiveTip.Cmp(msg.GasTipCap) > 0 {
+        effectiveTip = msg.GasTipCap
+    }
+}
+```
+
+- 计算 **有效 tip**：  
+$$
+f \equiv
+\begin{cases}
+T_p - H_f & \text{如果 } T_x = 0 \text{ 或 } 1 \\
+\min(T_f, T_m - H_f) & \text{如果 } T_x = 2
+\end{cases}
+$$
+
+然后：
+
+```go
+fee := new(uint256.Int).SetUint64(st.gasUsed())
+fee.Mul(fee, effectiveTipU256)
+st.state.AddBalance(st.evm.Context.Coinbase, fee, tracing.BalanceIncreaseRewardTransactionFee)
+```
+
+- 将 $(T_g - g^*) \cdot f$ 发放给 coinbase
+- 对应：
+
+$$
+\sigma^*[B_{H_c}]_b = \sigma_P[B_{H_c}]_b + (T_g - g^*) \cdot f
+$$
+
+
+###  baseFee 被销毁（burned）
+
+虽然在上述代码中没有直接体现，但根据 EIP-1559：
+
+- 用户支付的 baseFee 部分：
+  $$
+  (T_g - g^*) \cdot \text{baseFee}
+  $$
+  不会进入任何账户，而是被销毁（burned）
+
+### 总结
+
+| 项目            | 数学定义                                                              | 代码实现位置                     | 说明                  |
+| ------------- | ----------------------------------------------------------------- | -------------------------- | ------------------- |
+| sender gas 退款 | $\sigma^*[S(T)]_b = \sigma_P[S(T)]_b + g^* \cdot p$               | `gasRefund + returnGas()`  | 扣除后退还未使用的 gas       |
+| coinbase 收益   | $\sigma^*[B_{H_c}]_b = \sigma_P[B_{H_c}]_b + (T_g - g^*) \cdot f$ | `AddBalance(coinbase,...)` | 只含 tip，不含 baseFee   |
+| baseFee 销毁    | —                                                                 | （未在代码中显式调用）                | 转账时未分配的 baseFee 被销毁 |
+| EIP-7623 限制   | 强制 $g^* \leq T_g - \text{floorDataGas}$                           | `if gasUsed() < floor...`  | 最少消耗一定 gas（防 spam）  |
+|               |                                                                   |                            |                     |
+
+## 关于Final State
+即 [[6. Transaction Execution#最终状态（Final State）]] 中关于清除dead account 和 destructed account 的内容。
+没有在这里实现，详见 [[StateDB.go#Finalize]]
