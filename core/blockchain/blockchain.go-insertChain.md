@@ -85,9 +85,7 @@ func (it *insertIterator) next() (*types.Block, error) {
 	if bc.skipBlock(err, it) {
 		// First block (and state) is known
 		//   1. We did a roll-back, and should now do a re-import
-		//   2. The block is stored as a sidechain, and is lying about it's stateroot, and passes a stateroot
-		//      from the canonical chain, which has not been verified.
-		// Skip all known blocks that are behind us.
+		//   2. The block is stored as a sidechain, and is lying about it's stateroot, and passes a stateroot from the canonical chain, which has not been verified. Skip all known blocks that are behind us.
 		current := bc.CurrentBlock()
 		for block != nil && bc.skipBlock(err, it) {
 			if block.NumberU64() > current.Number.Uint64() || bc.GetCanonicalHash(block.NumberU64()) != block.Hash() {
@@ -102,10 +100,8 @@ func (it *insertIterator) next() (*types.Block, error) {
 		// During the snap sync, the pivot point is already submitted but rollback
 		// happens. Then node resets the head full block to a lower height via `rollback`
 		// and leaves a few known blocks in the database.
-		//
 		// When node runs a snap sync again, it can re-import a batch of known blocks via
-		// `insertChain` while a part of them have higher total difficulty than current
-		// head full block(new pivot point).
+		// `insertChain` while a part of them have higher total difficulty than current head full block(new pivot point).
 		for block != nil && bc.skipBlock(err, it) {
 			log.Debug("Writing previously known block", "number", block.Number(), "hash", block.Hash())
 			if err := bc.writeKnownBlock(block); err != nil {
@@ -120,7 +116,7 @@ func (it *insertIterator) next() (*types.Block, error) {
 ```
 
 上面的代码还可以细分为两部分：
-跳过已知部分：
+跳过已知部分；
 
 处理已知但是需要重写的区块：
 ```go
@@ -250,11 +246,18 @@ return MakeReceipt(evm, result, statedb, blockNumber, blockHash, tx, *usedGas, r
 详见 [[concensus]]
 
 
+### 返回 ProcessResult
+ProcessResult 中包括了
+- receipts：详见 [[receipt.go]]
+- requests ：Prague 升级的部分，详见 EIP-6110、EIP-7002、EIP-7251
+- Logs： 把receipt 中的log 另外打包了一个数组，还是见 receipt.go
+- GasUsed：Receipt 中的 `CumulativeGasUsed` ，具体的计算见 [[state_transition.go]]
+
 ## validator
 ```go
 bc.validator.ValidateState(block, statedb, res, false)
 ```
-
+详见：[[block_validator.go]]
 ## writeblock
 详见[[blockchain.go-writeBlock#writeBlockWithState]]
 ```go

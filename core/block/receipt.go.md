@@ -74,3 +74,8 @@ type Log struct {
 ### Bloom 计算
 详见 [[bloom9.go]]
 
+
+# receipt 来源
+这里主要讲把Transaction execution 结果打包为receipt 的过程。
+前置知识：[[6. Transaction Execution]]
+
