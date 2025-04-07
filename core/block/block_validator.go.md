@@ -129,7 +129,7 @@ var blobs int
         return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), res.GasUsed)
     }
 ```
-
+对应 [[12 Block Finalisation#12.2 交易验证（**Transaction Validation**）]]
 ### log bloom
 header 中的 $H_b$ **logsBloom** 字段是Receipt 中全部logs 的merge：
 ```go
@@ -183,6 +183,7 @@ func MergeBloom(receipts Receipts) Bloom {
     }
 ```
 其中，[[StateDB.go#IntermediateRoot]] 把StateDB finalize，然后计算了state Root Hash，这里就是要state trie 的根哈希。
+实际上对应了[[12 Block Finalisation#12.3 状态验证（**State Validation**）]]
 
 # CalcGasLimit
 
@@ -191,9 +192,7 @@ func MergeBloom(receipts Receipts) Bloom {
 参考 [[4.4.4 Block header validility#**区块 Gas 限制（$H_l$）的约束条件**]] 中的原理。
 虽然叫 CalcGasLimit，但其实这个函数的作用是用限制的最大最小值箍一下 `desiredLimit`. 这个值是矿工设定的，见：[[miner]]
 
-## 代码
-比较简单，不看了。
-
+付代码：
 ```go
 // CalcGasLimit computes the gas limit of the next block after parent. It aims
 // to keep the baseline gas close to the provided target, and increase it towards
