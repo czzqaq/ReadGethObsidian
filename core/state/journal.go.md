@@ -130,13 +130,48 @@ revert 指把入参StateDB 中相应的状态恢复到touch 之前。在journalE
 
 这些变更影响 **交易中的日志和退款信息**，但 **不会影响账户状态**。
 
-|变更类型|`revert()` 行为|`dirtied()` 返回值|
-|---|---|---|
-|`refundChange`|还原 `refund` 变量的值|`nil`|
-|`addLogChange`|从 `logs` 中移除最后一个日志，减少 `logSize`|`nil`|
+| 变更类型           | `revert()` 行为                   | `dirtied()` 返回值 |
+| -------------- | ------------------------------- | --------------- |
+| `refundChange` | 还原 `refund` 变量的值                | `nil`           |
+| `addLogChange` | 从 `logs` 中移除最后一个日志，减少 `logSize` | `nil`           |
 
 ✅ **特点**：
 
 - 这些变更 **不会影响账户的 World State**，但它们对 **交易回滚** 仍然至关重要。
 - `addLogChange` 直接影响 `logs` 数据结构，但不会影响 `stateObject`。
 
+
+# revision 和 snapshot
+
+## snapshot 
+```go
+func (j *journal) snapshot() int {
+	id := j.nextRevisionId
+	j.nextRevisionId++
+	j.validRevisions = append(j.validRevisions, revision{id, j.length()})
+	return id
+}
+```
+每次调用 `snapshot()` 会创建一个新的 `revision`，记录当前 `journal.entries` 的长度（即当前变更日志的末尾）。
+
+## revertToSnapshot
+回滚到指定快照点，撤销所有在该点之后的变更。具体操作的是：
+```go
+func (j *journal) revert(statedb *StateDB, snapshot int) {
+	for i := len(j.entries) - 1; i >= snapshot; i-- {
+		// Undo the changes made by the operation
+		j.entries[i].revert(statedb)
+
+		// Drop any dirty tracking induced by the change
+		if addr := j.entries[i].dirtied(); addr != nil {
+			if j.dirties[*addr]--; j.dirties[*addr] == 0 {
+				delete(j.dirties, *addr)
+			}
+		}
+	}
+	j.entries = j.entries[:snapshot]
+}
+```
+即：对于每个snapshot index 后（也就是被revert 的版本）的entry，调用entry.revert，修改对应的db 记录。不同revert 行为的区别见上一章。
+
+此外，修改dirtied 记录，以及删除这部分被revert 的entry。
