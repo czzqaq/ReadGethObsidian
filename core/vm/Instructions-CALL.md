@@ -104,10 +104,6 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, amount *uint256.I
 }
 ```
 
-
-
-
-
 ## 运行
 
 ```go
