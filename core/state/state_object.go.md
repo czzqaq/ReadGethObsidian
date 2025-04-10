@@ -21,6 +21,19 @@ type StateAccount struct {
 }
 ```
 
+账户包含两类：
+
+| 字段            | 外部账户（EOA）       | 合约账户（Contract Account）        |
+| ------------- | --------------- | ----------------------------- |
+| `nonce`       | ✅               | ✅                             |
+| `balance`     | ✅               | ✅                             |
+| `storageRoot` | ❌（无内容）          | ✅ 指向合约的存储Trie                 |
+| `codeHash`    | ❌（为默认值）         | ✅ 指向合约的EVM字节码                 |
+
+## storage
+并非world state 的组成部分（也就是不在链上），但每个合约都有一个，修改storage 改变storage Root，从而改变world state（所以修改storage 就会修改world storage 的认知没问题）。
+storage 的修改是通过执行交易，调用SSTORE 实现的。
+
 # 实现
 ### empty()
 
