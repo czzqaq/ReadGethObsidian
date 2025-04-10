@@ -127,6 +127,7 @@
 | SWAP16  | 0x9F        | `opSwap16`    | 17                 | 0      | Frontier        |
 
 ### LOG 系列 (0xA0 ~ 0xA4)
+这部分指令都是 write 状态的。
 
 | 指令名  | 指令值 (Hex) | Execute 函数    | 动态Gas函数         | pop 数 | 栈变化 | 从此 Fork 起支持 |
 |:--------|:-----------:|:----------------|:--------------------|:------:|:------:|:---------------:|
@@ -136,23 +137,25 @@
 | LOG3    | 0xA3        | `makeLog(3)`    | `makeGasLog(3)`     | 5      | -5     | Frontier        |
 | LOG4    | 0xA4        | `makeLog(4)`    | `makeGasLog(4)`     | 6      | -6     | Frontier        |
 
+
 ### CREATE / CALL / RETURN / SELFDESTRUCT 等 (0xF0 ~ 0xFF)
 
-| 指令名        | 指令值 (Hex) | Execute 函数      | 动态Gas函数       | pop 数 | 栈变化 | 从此 Fork 起支持 |
-|:--------------|:-----------:|:------------------|:------------------|:------:|:------:|:---------------:|
-| CREATE        | 0xF0        | `opCreate`        | `gasCreate`       | 3      | -2     | Frontier        |
-| CALL          | 0xF1        | `opCall`          | `gasCall`         | 7      | -6     | Frontier        |
-| CALLCODE      | 0xF2        | `opCallCode`      | `gasCallCode`     | 7      | -6     | Frontier        |
-| RETURN        | 0xF3        | `opReturn`        | `gasReturn`       | 2      | -2     | Frontier        |
-| DELEGATECALL  | 0xF4        | *Homestead后添加* | `gasDelegateCall` | 6      | -5     | **Homestead**    |
-| CREATE2       | 0xF5        | `opCreate2`       | `gasCreate2`      | 4      | -3     | **Constantinople** |
-| …            |   …         |    …               |  …                |  …     |  …     |   …             |
-| STATICCALL    | 0xFA        | `opStaticCall`    | `gasStaticCall`   | 6      | -5     | **Byzantium**    |
-| REVERT        | 0xFD        | `opRevert`        | `gasRevert`       | 2      | -2     | **Byzantium**    |
-| INVALID       | 0xFE        | `opUndefined`     | NA                | 0      | 0      | Frontier（一直未定义） |
-| SELFDESTRUCT  | 0xFF        | `opSelfdestruct`  | `gasSelfdestruct` | 1      | -1     | Frontier        |
+| 指令名          | 指令值 (Hex) | Execute 函数       | 动态Gas函数           | pop 数 | 栈变化 |    从此 Fork 起支持     | write |
+| :----------- | :-------: | :--------------- | :---------------- | :---: | :-: | :----------------: | :---: |
+| CREATE       |   0xF0    | `opCreate`       | `gasCreate`       |   3   | -2  |      Frontier      |   ✅   |
+| CALL         |   0xF1    | `opCall`         | `gasCall`         |   7   | -6  |      Frontier      |  ✅*   |
+| CALLCODE     |   0xF2    | `opCallCode`     | `gasCallCode`     |   7   | -6  |      Frontier      |   ✅   |
+| RETURN       |   0xF3    | `opReturn`       | `gasReturn`       |   2   | -2  |      Frontier      |   ❌   |
+| DELEGATECALL |   0xF4    | _Homestead后添加_   | `gasDelegateCall` |   6   | -5  |   **Homestead**    |   ✅   |
+| CREATE2      |   0xF5    | `opCreate2`      | `gasCreate2`      |   4   | -3  | **Constantinople** |   ✅   |
+| …            |     …     | …                | …                 |   …   |  …  |         …          |   …   |
+| STATICCALL   |   0xFA    | `opStaticCall`   | `gasStaticCall`   |   6   | -5  |   **Byzantium**    |   ❌   |
+| REVERT       |   0xFD    | `opRevert`       | `gasRevert`       |   2   | -2  |   **Byzantium**    |   ❌   |
+| INVALID      |   0xFE    | `opUndefined`    | NA                |   0   |  0  |  Frontier（一直未定义）   |   ❌   |
+| SELFDESTRUCT |   0xFF    | `opSelfdestruct` | `gasSelfdestruct` |   1   | -1  |      Frontier      |   ✅   |
 
----
+> * `CALL` 是否为写操作取决于是否设置 `value > 0`，或是否调用合约中可能包含 `SSTORE` 等写操作。
+
 
 ## 主要在后续分叉新增或改动的指令
 
