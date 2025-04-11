@@ -187,3 +187,27 @@ return nil, nil
 - 如果是 REVERT，设置 returnData，可以被父合约通过 `RETURNDATACOPY` 获取。
 - 否则清空 returnData。
 
+
+# CREATE 2
+这里仅描述差别，差别有且仅有：
+## opCreate2
+
+### 栈处理时输入不同
+多了一个salt 字段的入参
+```go
+	var (
+		endowment    = scope.Stack.pop()
+		offset, size = scope.Stack.pop(), scope.Stack.pop()
+		salt         = scope.Stack.pop()
+		input        = scope.Memory.GetCopy(offset.Uint64(), size.Uint64())
+		gas          = scope.Contract.Gas
+	)
+
+```
+
+## evm.CREATE2
+### 入参中地址不同
+```go
+contractAddr = crypto.CreateAddress2(caller, salt.Bytes32(), crypto.Keccak256(code))
+```
+
