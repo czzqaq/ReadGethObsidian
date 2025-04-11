@@ -1,4 +1,25 @@
 
+# jump 指令
+```go
+func opJump(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	if interpreter.evm.abort.Load() {
+		return nil, errStopToken
+	}
+	pos := scope.Stack.pop()
+	if !scope.Contract.validJumpdest(&pos) {
+		return nil, ErrInvalidJump
+	}
+	*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
+	return nil, nil
+}
+```
+
+比较简单，就是把 pc 设置到指定的pos。其中abort 是一个外界的信号量，提供给 ethapi 用的，不用管它。
+
+# valid Jumpdest
+对应 [[9. Execution Model#合法跳转目标函数 $D$]]
+
+
 ```go
 func (c *Contract) validJumpdest(dest *uint256.Int) bool {
 	udest, overflow := dest.Uint64WithOverflow()

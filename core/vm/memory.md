@@ -1,5 +1,6 @@
 某些操作涉及到了memory 字段。
 主要是源码的 `core/vm/memory.go` 相关的内容。
+
 # 概述
 ```go
 // Memory implements a simple memory model for the ethereum virtual machine.
@@ -9,7 +10,7 @@ type Memory struct {
 }
 
 ```
-可以发现，memory的实现挺简单，就是一个buffer。关于 lastGasCost,见：[[#memoryGasCost]]
+可以发现，memory的实现挺简单，就是一个buffer。关于 lastGasCost,见：[[gas(instructions)#memory]]
 
 ## memory接口
 
@@ -26,7 +27,7 @@ type Memory struct {
 | `Len()`       | 当前内存长度                 |     |
 | `Data()`      | 获取底层字节数组               |     |
 ## memory pool
-使用了go 内部的pool 概念，见编程
+使用了go 内部的pool 概念，见[[#sync.Pool]]
 ```go
 var memoryPool = sync.Pool{
 	New: func() any {
@@ -34,9 +35,6 @@ var memoryPool = sync.Pool{
 	},
 }
 ```
-# 程序
-## memoryGasCost
-
 
 
 # 编程
