@@ -3,5 +3,3 @@
 
 从 txdata 的实现开始，[[txdata, 以tx_dynamic_fee.go 为例]]
 
-
-[[gas fee]] 这是个未完成的部分，在处理gas 一章的时候，仔细研究。

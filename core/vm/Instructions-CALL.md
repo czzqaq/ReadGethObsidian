@@ -76,7 +76,7 @@ func (c *sha256hash) Run(input []byte) ([]byte, error) {
             gas -= wgas
 }
 ```
-#### EIP158 方案
+#### EIP-158 方案
 黄皮书上的方案。如果没有转账，就直接什么都不做。即空地址和不存在地址等同。
 ```go
   if !isPrecompile && evm.chainRules.IsEIP158 && value.IsZero() {
