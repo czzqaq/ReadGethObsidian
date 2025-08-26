@@ -1,4 +1,4 @@
-#todo 
+
 ## transaction.go 中
 ```go
 // Cost returns (gas * gasPrice) + (blobGas * blobGasPrice) + value.
@@ -11,3 +11,5 @@ func (tx *Transaction) Cost() *big.Int {
 	return total
 }
 ```
+消耗是gas * gasPrice
+另外，见

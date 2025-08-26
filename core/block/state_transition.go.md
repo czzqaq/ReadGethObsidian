@@ -43,12 +43,7 @@ func (st *stateTransition) execute() (*ExecutionResult, error) {
 | 13    | EIP-7702 授权列表合法性                    | EIP-7702 | 是，额外                             |
 | 14    | Floor Data Gas 检查                   | EIP-7623 | 否，见[[#Floor Data Gas(EIP-7623)]] |
 ## intrinsicGas
-
->- 交易数据字段的消耗，如果是全0可以便宜一点，T_i 用于contract creation，T_d 用于智能合约调用。
->- 合约创建时，有一笔基础费用, 且根据 init 数据段的长度额外收费, 收费公式 R 详见 [[#初始化代码成本函数 $R$]]
->- 交易基本开销
->- 根据 EIP-2930，交易的 AccessList 中，全部地址上储存键值的总数量，每个产生一笔，以及每个账户的储存。
-
+参考：[[6. Transaction Execution#intrinsic gas 和 gas fee]]
 
 ### 基础交易
 ```go
@@ -313,7 +308,7 @@ $$\sigma_0[S(T)]_n = \sigma[S(T)]_n + 1$$
 	}
 ```
 用剩余的gas ，执行data。这部分是evm 是工作了。这里明白它改变了gas就行。
-
+详见 [[Instructions-CALL]] 和 [[Instructions-CREATE]]
 
 ## 状态最终化（State Finalization）
 

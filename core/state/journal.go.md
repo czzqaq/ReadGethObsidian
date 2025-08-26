@@ -114,10 +114,10 @@ revert 指把入参StateDB 中相应的状态恢复到touch 之前。在journalE
 
 这些变更影响 **EIP-2929 访问列表**，但 **不影响账户状态**。
 
-|变更类型|`revert()` 行为|`dirtied()` 返回值|
-|---|---|---|
-|`accessListAddAccountChange`|从 `accessList` 中删除该账户|`nil`|
-|`accessListAddSlotChange`|从 `accessList` 中删除该存储槽|`nil`|
+| 变更类型                         | `revert()` 行为          | `dirtied()` 返回值 |
+| ---------------------------- | ---------------------- | --------------- |
+| `accessListAddAccountChange` | 从 `accessList` 中删除该账户  | `nil`           |
+| `accessListAddSlotChange`    | 从 `accessList` 中删除该存储槽 | `nil`           |
 
 ✅ **特点**：
 
