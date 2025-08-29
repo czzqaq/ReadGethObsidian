@@ -33,3 +33,61 @@ func (dp *DerivationPipeline) Step(ctx context.Context, pendingSafeHead eth.L2Bl
 ## deriver.go
 pipeline 的实际调用者. 事件驱动，例如 PipelineStepEvent、ForceResetEvent 等。只是一个包装。
 详见 [[deriver.go]]
+
+## l1TraversalStage
+L1Traversal 的实现。
+从当前的 L1 区块出发，尝试获取下一个 L1 区块的元信息（Header + Receipts）。
+
+详见 [[l1_traversal.go]]
+
+## L1Retrieval
+它从 L1 区块中提取出 **Rollup 相关的数据**，供后续模块处理。
+详见 [[l1_traversal.go]]
+
+## FrameQueue & ChannelMux
+L1Retrieval（获取 L1 数据） ──▶ FrameQueue（解析为 Frame） ──▶ ChannelMux（组装完整 Channel）
+
+在 Optimism 的 batch 数据结构中，L2 的交易数据被拆分为多个 **通道（channel）**，每个通道又被拆成多个 **帧（frame）**。
+
+详见 [[frame and channel]]
+
+## channelInReader
+将 **完整的 Channel 数据（[]byte）解码成一个一个 L2 Batch 的组件**，它也处理解压缩、RLP 限制、batch 类型判断等逻辑。
+
+## batchMux & attributesQueue
+
+batchMux 是一个简单的batch queue 缓冲。
+
+attributesQueue 将已解码的 **L2 Batch** 转换为 **`PayloadAttributes`**
+其中：
+
+```go
+type PayloadAttributes struct {
+	// value for the timestamp field of the new payload
+	Timestamp Uint64Quantity `json:"timestamp"`
+	// value for the random field of the new payload
+	PrevRandao Bytes32 `json:"prevRandao"`
+	// suggested value for the coinbase field of the new payload
+	SuggestedFeeRecipient common.Address `json:"suggestedFeeRecipient"`
+	// Withdrawals to include into the block -- should be nil or empty depending on Shanghai enablement
+	Withdrawals *types.Withdrawals `json:"withdrawals,omitempty"`
+	// parentBeaconBlockRoot optional extension in Dencun
+	ParentBeaconBlockRoot *common.Hash `json:"parentBeaconBlockRoot,omitempty"`
+
+	// Optimism additions
+
+	// Transactions to force into the block (always at the start of the transactions list).
+	Transactions []Data `json:"transactions,omitempty"`
+	// NoTxPool to disable adding any transactions from the transaction-pool.
+	NoTxPool bool `json:"noTxPool,omitempty"`
+	// GasLimit override
+	GasLimit *Uint64Quantity `json:"gasLimit,omitempty"`
+	// EIP-1559 parameters, to be specified only post-Holocene
+	EIP1559Params *Bytes8 `json:"eip1559Params,omitempty"`
+}
+```
+
+基本的以太坊block 字段，加拓展的Transactions 列表等。这些组件最终会被op-geth 的execution engine 打包。
+# 拓展
+官网：[Derivation pipeline](https://docs.optimism.io/stack/rollup/derivation-pipeline)
+
