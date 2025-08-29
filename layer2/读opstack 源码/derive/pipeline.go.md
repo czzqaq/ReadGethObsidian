@@ -88,6 +88,9 @@ type PayloadAttributes struct {
 ```
 
 基本的以太坊block 字段，加拓展的Transactions 列表等。这些组件最终会被op-geth 的execution engine 打包。
-# 拓展
+
+拓展阅读: [payload Attributes](https://specs.optimism.io/glossary.html?highlight=payload#payload-attributes)
+
+# # 拓展
 官网：[Derivation pipeline](https://docs.optimism.io/stack/rollup/derivation-pipeline)
 
