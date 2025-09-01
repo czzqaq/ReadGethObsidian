@@ -14,7 +14,7 @@
 ```
 
 在本章，从 batchMux 开始看起，最后到frame
-
+f 
 
 batch 使用的 chInReader，是作为了NextBatchProvider 的接口的实现者被使用的，具体到 这个接口：
 ```go
