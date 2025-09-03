@@ -44,15 +44,13 @@ L1Traversal 的实现。
 它从 L1 区块中提取出 **Rollup 相关的数据**，供后续模块处理。
 详见 [[l1_traversal.go]]
 
-## FrameQueue & ChannelMux
-L1Retrieval（获取 L1 数据） ──▶ FrameQueue（解析为 Frame） ──▶ ChannelMux（组装完整 Channel）
+## Frame & Channel
+L1Retrieval（获取 L1 数据） ──▶ FrameQueue（解析为 Frame） ──▶ ChannelMux（组装完整 Channel）-> channelInReader(将channel 读入batch)
 
 在 Optimism 的 batch 数据结构中，L2 的交易数据被拆分为多个 **通道（channel）**，每个通道又被拆成多个 **帧（frame）**。
 
 详见 [[frame and channel]]
 
-## channelInReader
-将 **完整的 Channel 数据（[]byte）解码成一个一个 L2 Batch 的组件**，它也处理解压缩、RLP 限制、batch 类型判断等逻辑。
 
 ## batchMux & attributesQueue
 
