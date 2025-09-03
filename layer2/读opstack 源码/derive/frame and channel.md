@@ -23,14 +23,25 @@ NextBatch(ctx context.Context) (Batch, error)
 ---
 
 chInReader 的实现中，调用了 channelMux 的 `NextRawChannel`，作为 RawChannelProvider，这部分的具体实现见： ChannelBank(channel_bank.go) 。在 channelMux.reset 中，规定了接口的实现由 ChannelBank 完成，或者版本不同的话由其他策略。
+注意定义了一个 RawChannelProvider 接口在类里，详见[[#类里接口]]
 
-注意定义了一个 RawChannelProvider 接口在类里，详见
-
-```
 ChannelBank 中调用了 NextFrameProvider 的 `NextFrame` 方法。
 
-
 ---
+
+FrameQueue 就是这个  NextFrameProvider，它调用了 NextDataProvider 的 `NextData` 方法，即L1 retrival。
+
+
+## 概念
+
+### frame
+
+简单的说，就是data 序列化后的结果。一个Data 会序列化为几段，每段固定长度，还有些frame ID  的必要信息。
+
+### channel
+
+
+
 
 
 
