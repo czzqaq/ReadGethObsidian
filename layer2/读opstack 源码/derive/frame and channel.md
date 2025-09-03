@@ -14,7 +14,7 @@
 ```
 
 在本章，从 batchMux 开始看起，最后到frame
-f 
+
 
 batch 使用的 chInReader，是作为了NextBatchProvider 的接口的实现者被使用的，具体到 这个接口：
 ```go
@@ -22,33 +22,10 @@ NextBatch(ctx context.Context) (Batch, error)
 ```
 ---
 
-chInReader 的实现中，调用了 channelMux 的 `NextRawChannel`，作为 RawChannelProvider，这部分的具体实现见： ChannelBank(channel_bank.go) 。在 channelMux.reset 中，规定了接口的实现由 ChannelBank 完成。
+chInReader 的实现中，调用了 channelMux 的 `NextRawChannel`，作为 RawChannelProvider，这部分的具体实现见： ChannelBank(channel_bank.go) 。在 channelMux.reset 中，规定了接口的实现由 ChannelBank 完成，或者版本不同的话由其他策略。
 
-注意定义了一个 RawChannelProvider 接口在类里
-```go
-type ChannelMux struct {
-    log  log.Logger
-    spec *rollup.ChainSpec
-    prev NextFrameProvider
-    m    Metrics
+注意定义了一个 RawChannelProvider 接口在类里，详见
 
-    // embedded active stage
-    RawChannelProvider
-}
-```
-```go
-func (c *ChannelMux) Reset(ctx context.Context, base eth.L1BlockRef, sysCfg eth.SystemConfig) error {
-    // TODO(12490): change to a switch over c.cfg.ActiveFork(base.Time)
-    switch {
-    default:
-        if _, ok := c.RawChannelProvider.(*ChannelBank); !ok {
-            c.log.Info("ChannelMux: activating pre-Holocene stage during reset", "origin", base)
-            
-        }
- ...
-    return c.RawChannelProvider.Reset(ctx, base, sysCfg)
-
-}
 ```
 ChannelBank 中调用了 NextFrameProvider 的 `NextFrame` 方法。
 
