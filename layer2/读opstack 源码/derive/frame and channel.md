@@ -15,12 +15,10 @@
 
 在本章，从 batchMux 开始看起，最后到frame
 
+batch 的迭代见SingularBatchProvider ，参考 batch_queue.go ，它调用了 NextBatchProvider。batch 最终也会形成一个queue 
 
-batch 使用的 chInReader，是作为了NextBatchProvider 的接口的实现者被使用的，具体到 这个接口：
-```go
-NextBatch(ctx context.Context) (Batch, error)
-```
 ---
+ChannelInReader 就是这个 `NextBatchProvider`
 
 chInReader 的实现中，调用了 channelMux 的 `NextRawChannel`，作为 RawChannelProvider，这部分的具体实现见： ChannelBank(channel_bank.go) 。在 channelMux.reset 中，规定了接口的实现由 ChannelBank 完成，或者版本不同的话由其他策略。
 注意定义了一个 RawChannelProvider 接口在类里，详见[[#类里接口]]
@@ -36,13 +34,16 @@ FrameQueue 就是这个  NextFrameProvider，它调用了 NextDataProvider 的 `
 
 ### frame
 
-简单的说，就是data 序列化后的结果。一个Data 会序列化为几段，每段固定长度，还有些frame ID  的必要信息。
+就是data 序列化后的结果再切片。一个Data 会序列化为几段，每段固定长度，还有些frame ID  的必要信息。
 
 ### channel
 
+零存整取，也就是说，它会把frame 顺序读取，再ready 的时候，统一把一整个channel 提供出去。包括了超时控制，资源约束，可读控制，frame 管理等内容。比较复杂。
 
+channel 也是一串bytes。
 
-
+## batch
+就是一堆 transaction 的列表。
 
 
 ## 依赖

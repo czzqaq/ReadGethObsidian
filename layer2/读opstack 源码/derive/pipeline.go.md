@@ -92,18 +92,13 @@ type PayloadAttributes struct {
 
 ## 如何使用pipeline
 
-尽管在pipeline 内定义了stages 变量，但它只是为了提供一个 reset 的顺序调用。实际上，调用为：
+尽管在pipeline 内定义了stages 变量，但它只是为了提供一个 reset 的顺序调用。实际上，调用就是顺序的调用，取下一个attribute 的时候，会逐级的batch, channel, frame, 直到L1 retrival 把DA 的数据读出来。
 
-frame queue 调用了：
-(l1r *L1Retrieval) NextData
-
-
-在没有数据可取的时候，调用 (l1t *L1Traversal) AdvanceL1Block
-
-*L1Retrieval  内，找到当前的cursor（(l1t *L1Traversal) NextL1Block）
+pipeline.Step 的调用者是  (d PipelineDeriver) OnEvent，它由rollup/driver 使用
 
 
 
 # # 拓展
-官网：[Derivation pipeline](https://docs.optimism.io/stack/rollup/derivation-pipeline)
-
+官网：
+[Derivation pipeline](https://docs.optimism.io/stack/rollup/derivation-pipeline)
+[pipeline 规范](https://specs.optimism.io/protocol/derivation.html#l2-chain-derivation-pipeline)
