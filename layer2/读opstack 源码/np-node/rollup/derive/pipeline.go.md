@@ -94,8 +94,9 @@ type PayloadAttributes struct {
 
 尽管在pipeline 内定义了stages 变量，但它只是为了提供一个 reset 的顺序调用。实际上，调用就是顺序的调用，取下一个attribute 的时候，会逐级的batch, channel, frame, 直到L1 retrival 把DA 的数据读出来。
 
-pipeline.Step 的调用者是  (d PipelineDeriver) OnEvent，它由rollup/driver 使用
-
+pipeline.Step 的调用者是  (d PipelineDeriver) OnEvent，它由rollup/driver 使用。总的调用逻辑是消息驱动的。
+**输出：** DerivedAttributesEvent 用来传递 Attributes 的输出，然后开始build sequence。[[sequencer.go]]
+**调用：** PipelineStepEvent 用来启动一次Attributes 的计算，它作为一个service，在op-service/ 上注册。
 
 
 # # 拓展
