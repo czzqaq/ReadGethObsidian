@@ -31,6 +31,7 @@
 说是 bitcoin 用了gossip。geth 用的是 [devp2p](https://github.com/ethereum/devp2p) ,还有提到 [# Kademlia](https://blog.csdn.net/han0373/article/details/80494437) 的。总之先把这里的gossip 的应用搞定吧。
 
 
+<<<<<<< HEAD
 # lib p2p
 
 整个文件都是对 pubsub "github.com/libp2p/go-libp2p-pubsub" 的包装。
@@ -101,6 +102,5 @@ publisher 不和 Subscriber 接触，仅仅是往 Topic 上发。
 这是一个异步调用过程。可以发现跟 emit(event) 和 on_event 基本一致，不过它的模型范围更广。
 
 上面的例子里，自己的线程既是publisher，做了 topic.Publish，也是subcriber。
-
 
 
