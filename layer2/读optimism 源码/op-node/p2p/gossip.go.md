@@ -30,3 +30,6 @@
 
 说是 bitcoin 用了gossip。geth 用的是 [devp2p](https://github.com/ethereum/devp2p) ,还有提到 [# Kademlia](https://blog.csdn.net/han0373/article/details/80494437) 的。总之先把这里的gossip 的应用搞定吧。
 
+
+# 代码
+
