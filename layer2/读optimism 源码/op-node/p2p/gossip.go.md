@@ -1,5 +1,5 @@
 
-# 概念
+# gossip 概念
 
 ## 过程
 
@@ -29,4 +29,78 @@
 ## 在web3中
 
 说是 bitcoin 用了gossip。geth 用的是 [devp2p](https://github.com/ethereum/devp2p) ,还有提到 [# Kademlia](https://blog.csdn.net/han0373/article/details/80494437) 的。总之先把这里的gossip 的应用搞定吧。
+
+
+# lib p2p
+
+整个文件都是对 pubsub "github.com/libp2p/go-libp2p-pubsub" 的包装。
+
+## 如何使用
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    pubsub "github.com/libp2p/go-libp2p-pubsub"
+    libp2p "github.com/libp2p/go-libp2p"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 创建 libp2p host
+    host, err := libp2p.New()
+    if err != nil {
+        panic(err)
+    }
+
+    // 创建 pubsub 实例，使用 Gossipsub 协议
+    ps, err := pubsub.NewGossipSub(ctx, host)
+    if err != nil {
+        panic(err)
+    }
+
+    // 加入一个主题
+    topic, err := ps.Join("example-topic")
+    if err != nil {
+        panic(err)
+    }
+
+    // 订阅该主题
+    sub, err := topic.Subscribe()
+    if err != nil {
+        panic(err)
+    }
+
+    // 启动一个 goroutine 接收消息
+    go func() {
+        for {
+            msg, err := sub.Next(ctx)
+            if err != nil {
+                fmt.Println("Error reading message:", err)
+                return
+            }
+            fmt.Printf("Received message: %s\n", string(msg.Data))
+        }
+    }()
+
+    // 发布消息
+    topic.Publish(ctx, []byte("Hello from libp2p pubsub!"))
+}
+```
+
+它使用了发布-订阅模型：
+```
+Publisher ---> [Topic: "news"] ---> Subscriber A 
+                           | +- --> Subscriber B
+```
+所有订阅topic的人（即subscriber）都会受到这个消息。
+publisher 不和 Subscriber 接触，仅仅是往 Topic 上发。
+
+这是一个异步调用过程。可以发现跟 emit(event) 和 on_event 基本一致，不过它的模型范围更广。
+
+上面的例子里，自己的线程既是publisher，做了 topic.Publish，也是subcriber。
+
+
 
