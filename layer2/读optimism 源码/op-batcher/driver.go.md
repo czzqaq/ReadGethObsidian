@@ -23,6 +23,7 @@
 
 `loadBlocksIntoState`: 它的block 来源是L2 client(客户端)，不在本optimism 的项目中实现。block 写入到[[channel_manager.go]] 
 
+
 ### publishingLoop
 
 ```
@@ -81,9 +82,27 @@ for pb := range pendingBytesUpdated:
     当初向用户收取的 L1 数据费基于“当时”的 DA 价格计算。如果真正发布时 DA 价格暴涨，batcher 可能要支付远高于它收的钱。
 
 
-## 3个 channel
+## channel
 
 不同的loop 之间用channel 通信，例如，当 blockLoadingLoop 检测到 sequencer 的状态合适后，读取了block，发送给 Publish Loop 信号，来说明：“来活儿了”。它比较类似于 emit 和 on event 的驱动，平时，这些loop 的go routine 就单纯loop 着。
+
+### 3个 channel
+
+```go
+    go l.receiptsLoop(l.wg, receiptsCh)                                           // ranges over receiptsCh channel
+
+    go l.publishingLoop(l.killCtx, l.wg, receiptsCh, publishSignal)               // ranges over publishSignal, spawns routines which send on receiptsCh. Closes receiptsCh when done.
+
+    go l.blockLoadingLoop(l.shutdownCtx, l.wg, unsafeBytesUpdated, publishSignal) // sends on unsafeBytesUpdated (if throttling enabled), and publishSignal. Closes them both when done
+    
+   go l.throttlingLoop(l.wg, unsafeBytesUpdated) // ranges over unsafeBytesUpdated channel
+```
+
+| channnel           | in               | out            |
+| ------------------ | ---------------- | -------------- |
+| unsafeBytesUpdated | blockLoadingLoop | throttlingLoop |
+| publishSignal      | blockLoadingLoop | publishingLoop |
+| receiptsCh         | publishingLoop   | receiptsLoop   |
 
 
 # 语法
