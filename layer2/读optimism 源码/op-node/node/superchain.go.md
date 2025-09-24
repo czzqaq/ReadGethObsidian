@@ -11,8 +11,15 @@ Superchain 是由多个 L2 **链**（OP Chains）组成的网络，这些链基�
 
 ## 在代码中
 
-这段代码用来完成版本检查，如果版本不兼容，就返回错误。主体是 engine_signalSuperchainV1 的RPC。
+这段代码主体是 engine_signalSuperchainV1 的RPC。这个signal 的作用是向网络发出“请准备好升级”的信号，其过程 见 [Superchain upgrades](https://docs.optimism.io/superchain/superchain-upgrades)
 
-这个signal 的作用是通知L2 chain 做版本更新，走的L2 协议。见 [Superchain upgrades](https://docs.optimism.io/superchain/superchain-upgrades)
+1.  **[ProtocolVersion](https://specs.optimism.io/protocol/superchain-upgrades.html?utm_source=op-docs&utm_medium=docs#protocolversions-l1-contract)** L1 smart contract 改变了配置，CL 层感知到链版本升级。
+2. 调用engine_signalSuperchainV1，通知网络做好升级准备。这是一个 L2 Execution layer 的RPC 服务，见 [engine_signalsuperchainv1](https://specs.optimism.io/protocol/exec-engine.html#engine_signalsuperchainv1)
+3. 在本代码中，根据配置，做 halt，即暂时停止CL 层链的增长，防止链分叉。
+
+
+
+
+
 
 
