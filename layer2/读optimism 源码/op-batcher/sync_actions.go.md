@@ -13,7 +13,9 @@ l               logger
 
 ### blocks
 
-其中，blocks 指L2 block，在 [[driver.go#blockLoadingLoop]] 中被确定。这里的代码写的不明显，实际上computeSyncActions 的输出恰好就是它下一次的输入。它被称为 “state”，这里等于是状态机，unsafe L2 blocks 的block number 就是核心的状态，此外还有 L1 的情况：
+其中，blocks 指L2 block，在 [[driver.go#blockLoadingLoop]] 中被确定。这里的代码写的不明显，实际上computeSyncActions 的输出恰好就是它下一次的输入。它被称为 “state”，这里等于是状态机，unsafe L2 blocks 的block number 就是核心的状态
+
+它是全部的在 batcher 中的block，在这个循环开始前都是unsafe 的。我们的目标就是改变这个 blocks array，prune 掉那些已经safe 的，同步到 L1的。
 
 ### channel
 channels —— 已打包但可能仍在 L1 等待确认的 Channel 列表
@@ -23,7 +25,8 @@ channels —— 已打包但可能仍在 L1 等待确认的 Channel 列表
 
 
 ### newSyncStatus
-newSyncStatus 包括下面这些
+它来自 rollupclient，通过 RPC 调用。它就单纯是一个 optimism-node，实现在 [[status]]。
+newSyncStatus 包括下面这些，当前的 L1是什么，safe L2 是什么，等等。
 ```go
 // SyncStatus is a snapshot of the driver.
 // Values may be zeroed if not yet initialized.
@@ -66,4 +69,69 @@ type SyncStatus struct {
 }
 
 ```
+
+## 如何更新
+### 输出
+
+它输出的就是哪些本地的 L2 block 需要被prune，哪些L1 block 需要被load。
+```go
+type syncActions struct {
+    clearState      *eth.BlockID
+    blocksToPrune   int
+    channelsToPrune int
+    blocksToLoad    *inclusiveBlockRange // the blocks that should be loaded into the local state.
+    // NOTE this range is inclusive on both ends, which is a change to previous behaviour.
+}
+```
+
+### blocksToPrune
+safe L2 增长，说明这部分已经提供给 L1 了，于是不需要再存储在batcher里。注意这部分 L2 的增长就是 batcher 同步带来的。
+```go
+safeL2 := newSyncStatus.LocalSafeL2
+nextSafeBlockNum := safeL2.Number + 1
+
+oldestBlockInState, hasBlocks := blocks.Peek() // blocks[0]
+oldestBlockInStateNum := oldestBlockInState.NumberU64()
+
+numBlocksToDequeue := nextSafeBlockNum - oldestBlockInStateNum
+
+blocksToPrune：numBlocksToDequeue
+```
+
+### channelsToPrune
+
+```go
+    numChannelsToPrune := 0
+    for _, ch := range channels {
+        if ch.LatestL2().Number > safeL2.Number {
+            // If the channel has blocks which are not yet safe
+            // we do not want to prune it.
+            break
+        }
+        numChannelsToPrune++
+    }
+```
+
+这里注意，在 add block 时，ch.LatestL2() 会增长，一个channel full 了才会在它后面 append 一个新channel。于是，channel 中的block 是不重复的递增的。
+
+### blocksToLoad
+
+```go
+newestBlockInState := blocks[blocks.Len()-1]
+newestBlockInStateNum := newestBlockInState.NumberU64()
+
+    if newSyncStatus.UnsafeL2.Number > newestBlockInStateNum {
+        allUnsafeBlocksAboveState = &inclusiveBlockRange{newestBlockInStateNum + 1, newSyncStatus.UnsafeL2.Number}
+        
+        blocksToLoad:    allUnsafeBlocksAboveState,
+    }
+```
+
+输入的blocks 的最新的，如果落后于了当前的 SyncStatus，就再载入一些。
+
+
+
+## 什么是 SyncStatus
+
+可以注意到，这个函数的本质，仅仅是把 SyncStatus 的内容，提取出来，便于更改 [[channel.go]] 的状态而已。所以真的 L2 和L1 的同步，还得看 [[status]]
 

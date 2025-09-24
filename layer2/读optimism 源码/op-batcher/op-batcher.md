@@ -24,3 +24,10 @@ sequencer -> batcher -> L1 DA -> derivation 的关系如下图所示。
   
 ![[Pasted image 20250918170118.png]]
 其中，可以看到 4个loop，见：[[driver.go]]
+
+# 阅读
+
+从 driver 开始读，跟着超链接完成阅读。整套系统的核心就是 channel，它本质上维护了一个队列，回答了哪些L2 要送往 L1 的问题。
+
+
+
