@@ -15,9 +15,7 @@
 > but each is merely an enabler for consensus protocols.
 
 
-## safe 和 liveness
 
-safe 指的是任何节点的认知都是一致的，起码不会出现矛盾的最终状态。live 指的是链会不停运行。这是一对矛盾，因为很显然，liveness 要求的是在任何情况下，包括出错的时候，都继续运行的能力。
 
 ## eth 2.0 
 
