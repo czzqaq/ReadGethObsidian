@@ -30,6 +30,13 @@ $$f = \left\lfloor \frac{n - 1}{3} \right\rfloor
 在这种极限情况下，回复里的诚实回复数量必须大于faulty 的，才能得到正确共识：
 (n-f) - f > f，即 n > 3f
 
+## 目的
+m 是客户端发来的一个操作请求，比如“给我账户余额”，在replica 上全都运行一遍。如果每个 replica 都是诚实的，那么这个系统将会一致。
+这个算法保证：
+每个replica节点，按照相同的顺序，执行相同的请求。
+
+我们把每次请求定为一个epoch，每次只有一个 epoch 在执行，保证了相同顺序，之后就由下面的验证行为确定执行的是相同的请求。
+
 # 具体行为
 
 ## 角色
@@ -46,7 +53,7 @@ pre-prepare 阶段负责广播来自 客户端 的request。其他阶段等于�
 - **预准备（pre-prepare）**：主节点为请求分配序列号n，多播PRE-PREPARE消息（携带请求摘要）给备份，并将消息记入日志。
 - **准备（prepare）**：备份收到并验证PRE-PREPARE消息后，发PREPARE消息给所有副本，并将消息记入日志。
 - **提交（commit）**：副本（含主节点）收到足够（2f+1）PREPARE消息后，多播COMMIT消息。
-- **reply**: 收到2f+1个匹配COMMIT消息后，副本提交请求。
+- **reply**: 收到2f+1个匹配COMMIT消息后，副本运算操作m，提交包括了 执行 m 的结果在内的消息。
 - **确认信息**：client  收到f+1 个相同回复，即可确认。
 
 一般说流程是3步，pre-prepare~commit
@@ -106,4 +113,27 @@ commit 指的是通知其他节点，我认同了当前节点下的concensus 是
 
 
 ## view change 流程
+### 概念对齐
 
+- view ：一轮普通的消息传递。
+- view change：因为 primary node 失败，在足够长的时间里都没有得到 f+1 的commitment，为了让系统有有限的 liveness，还能继续跑下去，换一个新的 primary，继续运行。
+- primary 即某一个特定view 里负责广播pre prepare 消息的，它实际上也决定了 view 的epoch。
+- backup： 非primary 的replica
+- checkpoint：每个消息 m，被执行后，产生的state 就是一个checkpoint。
+- stable checkpoint：已经被证明的checkpoint。
+
+### 论文中出现的符号
+
+- v: view 编号
+- i: 代表某一个backup
+- σ(i）: i 的数字签名
+- n: 最近一次 checkpoint 对应的n。
+- **P** : P_m 的集合
+- P_m: 一些数据的集合，表示对消息m 的数据响应。包括了：D(m), digest of message m；
+- **C** : checkpoint message 的集合，为了理解checkpoint，见 4.2 garbage collection，简单来说，就是定期发一个对当前状态的验证消息，看是否有足够多的人同意这个状态。这些同意的 message 构成的集合。这个消息是用来证明消息中 n  的合法性，它确实是最新一次checkpoint 的n。
+
+### 过程
+
+1. 停止运行，不再接受上一个 view 的消息。
+2. 向全部节点广播 VIEW-CHANGE 消息，包括当前的 view number，对应的check point epoch *n*, 新的checkpoint 的request 
+3. 当 promary node 得到 2f 个确认 view change 完成的消息，它广播
