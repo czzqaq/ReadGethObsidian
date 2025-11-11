@@ -5,7 +5,7 @@ Practical Byzantine Fault Tolerance。原论文：[reference](http://pmg.csail.m
 
 关于 liveliness 和 safety，见 [[相关知识#safe 和 liveness]]
 
-该算法的practical，其实就是给了拜占庭算法的一个实现。一个优化是，它的网络依赖 synchrony 提供liveness(因为在完全 asynchronous 的系统中实现 liveness+safety 不可能)，PBFT 假设网络不会完全异步，即等待有限的时间，所有消息都能正确送达。如果没有达到这种理想的 synchrony 假设，依然可以保证 safety，但是没有liveness，系统会卡住，永远无法进行下去。拓展阅读：[[相关知识#FLP 不可能原理]]
+该算法的practical（P之于PBFT)，其实就是给了拜占庭算法的一个实现。一个优化是，它的网络依赖 synchrony 提供liveness(因为在完全 asynchronous 的系统中实现 liveness+safety 不可能)，PBFT 假设网络不会完全异步，即等待有限的时间，所有消息都能正确送达。如果没有达到这种理想的 synchrony 假设，依然可以保证 safety，但是没有liveness，系统会卡住，永远无法进行下去。拓展阅读：[[相关知识#FLP 不可能原理]]
 
 ## faulty 容错
 
