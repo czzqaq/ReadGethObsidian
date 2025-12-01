@@ -4,7 +4,7 @@
 
 ## 作用
 1. 这是一个辅助的**服务** service
-2. 和 Sequencer 并行工作，阅读 [sequencer](https://specs.optimism.io/background.html?highlight=sequencer#sequencers)
+2. 和 Sequencer 串行工作，阅读 [sequencer](https://specs.optimism.io/background.html?highlight=sequencer#sequencers)
 3. 表现得仿佛是一个 concensus layer，决定 sequencer 的“leader”（？），unsafe block ，检查 sequencer 的health（在线等等）
 4. 但是注意，它并不跑共识算法，所有的sequencer 这里都是可信的。
 
@@ -12,7 +12,7 @@
 ![[Pasted image 20250925081055.png]]
 
 
-总之我要明白 sequencer 是什么，他们是产生 L2 的用户没错，整个L2 上的流程它能解决掉，但是不安全，于是需要 batcher 提供 DA，以及可能有后续的derivation 来解决L1 和 L2 之间的一致性问题。[[sequencing]]
+我要明白 sequencer 是什么，他们是产生 L2 的用户没错，整个L2 上的流程它能解决掉，但是不安全，于是需要 batcher 提供 DA，以及可能有后续的derivation 来解决L1 和 L2 之间的一致性问题。[[sequencing]]
 
 这里的leader 就是分布式数据库里的概念，见 [raft](https://zhuanlan.zhihu.com/p/643338097). batcher 最终只依赖 leader 的结果，而 conductor 负责选出leader，和保证各个sequencer 与leader 同步。
 这让人不免疑惑，sequencer 的集群有什么好处吗？结果研究了一下，好像它主要就起一个灾备效果。
