@@ -3,3 +3,5 @@
 	几个组件 sequence, driver, engine, attribute 的关系
 
 sequencing [[sequencing]]
+
+相当重点的一部分，好好看看 。[[concensus-raft]] 
