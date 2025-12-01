@@ -39,13 +39,15 @@ m 是客户端发来的一个操作请求，比如“给我账户余额”，在
 
 # 具体行为
 
-## 角色
+## 概念
 ### 客户端
-负责决定主节点。负责控制请求间隔。
 向主节点发送请求系统应答的 request，并追踪全部节点的应答。最终决定一致的consensus结果。
 
 ### 主节点
 pre-prepare 阶段负责广播来自 客户端 的request。其他阶段等于一个普通节点。
+
+### view
+主节点由 view 号决定，p = v mod n。
 
 ## 流程
 ![[Pasted image 20250925152120.png]]
@@ -129,11 +131,34 @@ commit 指的是通知其他节点，我认同了当前节点下的concensus 是
 - σ(i）: i 的数字签名
 - n: 最近一次 checkpoint 对应的n。
 - **P** : P_m 的集合
-- P_m: 一些数据的集合，表示对消息m 的数据响应。包括了：D(m), digest of message m；
+- P_m: 一些数据的集合，表示对消息m 在n 之后的消息相应。它包含一个 PRE-PREPARE消息，2f 个 PREPARE 消息。由P_m 证明消息 m 本应该被 check in（但是没有，因为checkpoint 在之前）
 - **C** : checkpoint message 的集合，为了理解checkpoint，见 4.2 garbage collection，简单来说，就是定期发一个对当前状态的验证消息，看是否有足够多的人同意这个状态。这些同意的 message 构成的集合。这个消息是用来证明消息中 n  的合法性，它确实是最新一次checkpoint 的n。
+- **V**: 全部primary 收到的 VIEW-CHANGE,和它将要发出的VIEW CHANGE 消息。
+- **O**：新view 的pre-prepare 消息。
 
 ### 过程
 
-1. 停止运行，不再接受上一个 view 的消息。
-2. 向全部节点广播 VIEW-CHANGE 消息，包括当前的 view number，对应的check point epoch *n*, 新的checkpoint 的request 
-3. 当 promary node 得到 2f 个确认 view change 完成的消息，它广播
+1. 由任意一个 backup 的超时触发。一个请求在时间内没有得到 commit，就是超时。这个备份称为 i，此时的view 是 v，切换到 v+1。
+2. i 停止运行，不再接受消息。除了和 view change 有关的 CHECKPOINT VIEW-CHANGE NEW-VIEW。
+3. 向全部节点广播 VIEW-CHANGE 消息，包括n，**C**，**P**
+4. 当 promary node 得到 2f 个 VIEW-CHANGE 消息时，它广播 NEW-VIEW 消息。包括 **V** 和 **O**，**O** 开始了新的一轮 view。**O**的计算如下。
+5.  NEW-VIEW 消息中包含了全量的消息log，据此每个backup 验证 **O** 的正确性，然后以这个新 view 为准，继续normal 流程，开始 PREPARE 的消息相应。
+
+#### 计算 O
+O 是在 NEW-VIEW 消息 中的，由primary计算。
+
+计算 
+*min-s*  = max{n_i}
+max-s = max{ 所有 P 中的 PREPARE 消息中出现的序列号 }
+
+对于 min-s ~ max-s 之间的每个 序号n'：
+选择一个Pm，其 PRE-PREPARE message 的序列化n=n' 。
+如果由多个，选n 最大的一个，如果一个都没有，构造空请求。
+
+依据这个选择的PRE-PREPARE ，构造 **O**=PRE-PREPARE(v+1, n, d)，即v+1, 其他不变。
+
+
+# 改进算法
+tendermint, Hotstuff
+
+#todo
