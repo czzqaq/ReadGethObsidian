@@ -45,7 +45,7 @@ cmd.Action = geth
 ## makeFullNode
 一个通用的上下文加载器，它会返回`stack`，也就是一个node
 
-关于node，详见 [[node]]
+关于node，详见 [[geth 源码/node/node]]
 
 
 ## startNode

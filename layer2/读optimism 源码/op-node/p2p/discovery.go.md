@@ -85,8 +85,6 @@ register 发送的内容有 topic 和 node id。另外还包括了 ip, port,
 [Discovery Overview](https://github.com/ethereum/devp2p/wiki/Discovery-Overview) 开发者笔记，讲讲 eth 的p2p 协议现在的问题和概念。
 
 
-
-
 # 在代码中
 
 discovery.go 中最主要的函数是 DiscoveryProcess。该函数负责把 Ethereum DiscV5 (UDP-based) 的节点发现结果转换成 LibP2P 的连接信息，其中 DiscV5 就是上面写的。

@@ -14,7 +14,7 @@ type: folder_brief_live
 - **`types.go`**：[[types.go]]
     - 定义了 block number，和其行为
     - 定义了ServerCodec 接口，是一个读写解析 RPC 消息的服务器要实现的功能。
-    - 定义了 API 结构，被大量使用，用来指明一个 [[node]] 作为server 可以提供的调用行为
+    - 定义了 API 结构，被大量使用，用来指明一个 [[geth 源码/node/node]] 作为server 可以提供的调用行为
 - **`json.go`**：
     - 提供序列化和反序列化的辅助函数，将 Go 数据结构和 JSON 格式相互转换。
 

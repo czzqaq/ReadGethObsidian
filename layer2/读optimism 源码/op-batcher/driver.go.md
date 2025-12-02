@@ -107,7 +107,7 @@ for pb := range pendingBytesUpdated:
 
 # 语法
 ## waitgroup
-`sync.WaitGroup` 是 Go 提供的一个用于 **等待一组 goroutine 完成执行的同步原语**。它常用于多个并发任务之间的协作，确保主线程在所有子任务完成之后再继续执行。
+`sync.WaitGroup` 是 Go 提供的一个用于 **等待一组 goroutine 完成执行的同步**。它常用于多个并发任务之间的协作，确保主线程在所有子任务完成之后再继续执行。
 
 ### 例子
 ```go
@@ -133,8 +133,8 @@ All goroutines finished
 ### 注意
 
 wg 的计数为负时，panic。
-wg.Done() 线程安全。
-wg.Add 也算安全，但是它和Wait() 之间存在竞争关系。但该在协程前调用 wg.Add。例如
+线程安全。
+wg.Add 和Wait() 之间存在竞争关系。该在协程前调用 wg.Add。例如
 
 这是合法的：
 
@@ -165,6 +165,8 @@ for i := 0; i < 10; i++ {
 
 wg.Wait()
 ```
+
+wait 和 add 必须在一个线程里，不然子携程还没运行，主线程已经wait 调用，发现了值是0，就直接放开了。
 
 ## errgroup
 
@@ -214,7 +216,7 @@ func main() {
 
 context 本质就是一个读写安全的信号。并提供了超时、cancel等控制方式。
 
-例如，这里是一个cancel 的例子。任何触发了ctx.cancel() 的过程，都往 chanell 上给了信息。
+例如，这里是一个cancel 的例子。任何触发了ctx.cancel() 的过程，都往 channel 上给了信息。
 ```go
 ctx, cancel := context.WithCancel(context.Background())
 
