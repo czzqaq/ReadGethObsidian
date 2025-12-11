@@ -3,7 +3,7 @@
 ## abigen
 这个代码由 [apigen](https://geth.ethereum.org/docs/tools/abigen) 自动生成。
 apigen 依赖编译sol 产生的 abi。
-> 以防我忘记：ABI 告诉外部，这个合约有哪些函数，参数是什么；Bin 是合约编译后的二进制。Bin + ABI，就等于看到了源码。其实可以这样想，.abi 和 .bin，就类似于.h 和 .o。
+> 补点基础概念：ABI 告诉外部，这个合约有哪些函数，参数是什么；Bin 是合约编译后的二进制。Bin + ABI，就等于看到了源码。其实可以这样想，.abi 和 .bin，就类似于.h 和 .o。
 
 如果在生成文件时还带着 bin，那么abigen 中会多出一个 Deploy 方法。
 ```go

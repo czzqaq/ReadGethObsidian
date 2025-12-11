@@ -40,7 +40,7 @@ m 是客户端发来的一个操作请求，比如“给我账户余额”，在
 
 # 具体行为
 
-## 角色
+## 概念
 ### 客户端
 负责控制请求间隔。
 向主节点发送请求系统应答的 request，并追踪全部节点的应答。最终决定一致的consensus结果。
@@ -171,8 +171,10 @@ commit 指的是通知其他节点，我认同了当前节点下的concensus 是
 - n: 最近一次 checkpoint 对应的n。
 - **P** : P_m 的集合
 - d, digest，即消息的哈希。
-- P_m: 一些数据的集合，表示对消息m 的数据响应。包括了d
+- P_m: 一些数据的集合，表示对消息m 在n 之后的消息相应。它包含一个 PRE-PREPARE消息，2f 个 PREPARE 消息。由P_m 证明消息 m 本应该被 check in
 - **C** : checkpoint message 的集合，为了理解checkpoint，见 4.2 garbage collection，简单来说，就是定期发一个对当前状态的验证消息，看是否有足够多的人同意这个状态。这些同意的 message 构成的集合。这个消息是用来证明消息中 n  的合法性，它确实是最新一次checkpoint 的n。
+- **V**: 全部primary 收到的 VIEW-CHANGE,和它将要发出的VIEW CHANGE 消息。
+- **O**：新view 的pre-prepare 消息。
 
 ### 过程（基于论文 §4.4）
 
@@ -240,3 +242,7 @@ $$
        - 像平时一样进入 prepare 阶段：记录日志并广播 PREPARE(v+1, s, d)。
 
    从此之后，大家就在新视图 v+1 下继续正常的 pre-prepare / prepare / commit 流程。
+
+
+# 改进算法
+tendermint, Hotstuff
