@@ -1,32 +1,39 @@
 # disv5
 
-## kademlia
+## 概念
+### kademlia
 
 
 Discv5 用的路由表和Kademlia 很接近。而 [kademlia 的路由表](https://zhuanlan.zhihu.com/p/40286711) 是一个分布式的迭代查询，用平均 log N 次能找到到一个节点的路由，而每个节点记录的路由表的个数却可以很少，总共最多 160（哈希的位数）个桶，每个桶大概装最多20个节点的路由。
 
+**为什么要有kademlia**：当一个新的 ethereum 节点开始运行时，它需要找到网络上的其他矿工/validator,.. 此时，它就需要这个discovery 协议了。这个“discover 其他矿工” 的过程，通过 DHT, distributed hash table 来组织。像 kademlia 里的 K-Bucket 就是其中一种。总之，路由表就是一个以distination node 为键值的 hash table，但是peer 太多了，所以我们需要一种把它distribute 的方法。
 
-## discv4
+### discv4
 
 在以太网上，用的更多的反而是上一个版本。它的相关教程要多一些。
 这几乎就是 kademlia 套壳，一样的节点发现过程，一样的路由表。增加了一些对报文格式的规定，还有ping 方式的 bonding(用来防止放大攻击)。详见： [discv4](https://raw.githubusercontent.com/ethereum/devp2p/master/discv4.md) 
 
-## bootstrap node
-以太网等官网提供的固定 ENR 信息的节点，用来做初始化，一个新加入的节点会从bootstrap node 开始，通过 discv4(5) 的find node 类协议构建 k-bucket 路由表。
-
-
-## 作用
-**为什么要有kademlia**：当一个新的 ethereum 节点开始运行时，它需要找到网络上的其他矿工/validator,.. 此时，它就需要这个discovery 协议了。这个“discover 其他矿工” 的过程，通过 DHT, distributed hash table 来组织。像 kademlia 里的 K-Bucket 就是其中一种。总之，路由表就是一个以distination node 为键值的 hash table，但是peer 太多了，所以我们需要一种把它distribute 的方法。
-
-**为什么有 discv5:** 
-我们知道 discv4 基本就是 kademlia 套皮。
-有一个难点是，节点在网络上，其实可以发现非常大量的peer，它们的确都支持discv4 协议，不过它们不一定运行着我的application（比如eth 主网和测试网就是两个完全不同的application）。不运行同样应用的节点，在discv 4 上的组网是冗余的，要去除它，找到真正的在 app layer 上有效的peer，需要依次find node,逐个询问。
+discv4 基本就是 kademlia 套皮。它有缺陷。
+节点在网络上，其实可以发现非常大量的peer，它们的确都支持discv4 协议，不过它们不一定运行着我的application（比如eth 主网和测试网就是两个完全不同的application）。不运行同样应用的节点，在discv 4 上的组网是冗余的，要去除它，找到真正的在 app layer 上有效的peer，需要依次find node,逐个询问。
 这显然不够高效，discv5 引入了topic 的概念，做更高效的 service discovery
 
+### bootstrap node
+以太网等官网提供的固定 ENR 信息的节点，用来做初始化，一个新加入的节点会从bootstrap node 开始，通过 discv4(5) 的find node 类协议构建 k-bucket 路由表。
+node 就是一个p2p 的网络单元。discv 就是一个**节点**的发现协议。
 
+### ENR 
+它是从dicv4 中就有的概念，但在discv5中做了改进。discv5的版本见： https://eips.ethereum.org/EIPS/eip-778
 
+ENR是一个包含节点信息的结构化数据记录，用KV 的格式组织起来必要的节点信息描述。
 
+可以包含以下信息：
+- 节点的公钥和签名，用来验证节点的身份和消息完整性。
+- 节点的IP地址和端口号，支持选择 ipv6
+- 序列号，每当节点更改其记录（例如 IP 变了），它必须增加这个数字并重新发布记录。其他节点通过比较 `seq` 的大小来确定谁是最新的。
+- 节点的版本号，例如 "v4" 或 "v5"。
+- 其他附加信息。
 
+ENR 编码为 RLP，也可以用文字编码。这里不深入到编码细节。 
 
 ## 实现细节
 ### 4 layer
@@ -84,6 +91,11 @@ register 发送的内容有 topic 和 node id。另外还包括了 ip, port,
 这个[youtube 教程](https://www.youtube.com/watch?v=o17ly2hej9w ) ，似乎是一个学者详细的介绍 discv5。
 [Discovery Overview](https://github.com/ethereum/devp2p/wiki/Discovery-Overview) 开发者笔记，讲讲 eth 的p2p 协议现在的问题和概念。
 
+
+## rust 版本
+
+https://github.com/sigp/discv5 这里是一个 rust 写出来的库。我将详细阅读它，见：
+[[rust-discv5]]
 
 # 在代码中
 
