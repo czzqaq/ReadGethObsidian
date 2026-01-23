@@ -169,3 +169,7 @@ async fn main() {
 有一个中心的 service.rs，来处理全部消息。这个service 内监听一个 consumer，并把 producer 给handle 保存。任何一次调用（比如FindNode) 都会获得一个新的 producer（mpsc支持clone producer) ，然后给service 发消息。service 负责调用具体的某个功能函数。
 
 
+## k bucket
+### 普通的k bucket
+这里不是一个总结，仅仅帮我回忆一下，为理解discv5 的版本打好基础。
+先定义桶。它提供add 和split。一个桶可以储存固定 id 范围的node，如果split，范围减小而提供了不满的桶。桶的集合是路由表，路由表在初始化时，提供一个local id，并建立一个range 为$[0,2^{key_len})$ 的桶包括它。添加节点时，split 包含local id 的桶，丢弃
