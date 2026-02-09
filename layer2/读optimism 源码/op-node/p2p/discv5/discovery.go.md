@@ -231,10 +231,25 @@ Topic 指一类服务。一个节点可以关联多个或者0个Topic。Topic �
 每个 queue 中的节点信息，都会有一个寿命 target-ad-lifetime。 target-ad-lifetime = 15 分钟。
 显然，如果 Table 满了，等全表腾出一个空位，如果当前Topic queue 满了，等queue 空出来。如果不满，直接进。
 
-为了做到这一点，使用 Ticket 控制注册速度。如果满了，就给你一个 ticket，告诉你需要等待多久。ticket 并没有严格的结构规范，但一般：Ticket = 加密(密钥, 随机数, \[谁领的, IP是多少, 啥主题, 领券时间, 需要等多久, 累计等待时间\])。等到时间到了，客户端拿着 ticket 重新向服务端申请 place ad。
+为了做到这一点，使用 Ticket 控制注册速度。如果满了，就给你一个 ticket，告诉你需要等待多久。ticket 并没有严格的结构规范，但一般：Ticket = 加密(密钥, 随机数, \[谁领的, IP是多少, 啥主题, 领券时间, 需要等多久, 累计等待时间\])。等到时间到了，客户端拿着 ticket 重新向服务端申请 place ad。这个申请有一个窗口期，是在\[领券时间+等待时间~领券时间+等待时间+10s\] 的区间里
+
 
 这个机制保证了无状态的等待控制，让服务端无需维护一个等待时间的队列。
 
+#### 协议
+下面仅简单介绍：
+
+REGTOPIC
+用来做一个 place an ad 请求。提供了topic、ENR。可以带 ticket 或者不带ticket 请求。总是被 TICKET 回应，还可能跟着一条 REGCONFIRMATION。
+
+TICKET
+REGTOPIC 的回应。提供一个ticket，详见 [[#寿命控制和 ticket]]。
+
+[REGCONFIRMATION](https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#regconfirmation-response-0x09)
+表示 server 已经发布了REGTOPIC 请求的ad。
+
+TOPICQUERY
+指定一个topic，读取其 topic queue
 
 ## 资料
  [kademlia 的路由表](https://zhuanlan.zhihu.com/p/40286711) kademlia 算是一个前置知识。
@@ -242,8 +257,9 @@ Topic 指一类服务。一个节点可以关联多个或者0个Topic。Topic �
 这个[youtube 教程](https://www.youtube.com/watch?v=o17ly2hej9w ) ，似乎是一个学者详细的介绍 discv5。
 [Discovery Overview](https://github.com/ethereum/devp2p/wiki/Discovery-Overview) 开发者笔记，讲讲 eth 的p2p 协议现在的问题和概念。
 [devp2p的 discv5 规范](https://github.com/ethereum/devp2p/blob/master/discv5/discv5-rationale.md)
-https://github.com/sigp/discv5 这里是一个 rust 写出来的库。我将详细阅读它，见：
-[[rust-discv5]]
+https://github.com/sigp/discv5 这里是一个 rust 写出来的库。我将详细阅读它，见：[[rust-discv5]]
+[官方disv5规范](https://github.com/ethereum/devp2p/blob/master/discv5/discv5.md) 一个最好的discv5 规范文档和教程。
+
 
 # 在代码中
 
